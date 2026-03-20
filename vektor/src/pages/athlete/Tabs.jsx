@@ -199,19 +199,34 @@ export function Metrics() {
 export function RMMaximo() {
   const { user } = useAuth()
   const [records, setRecords] = useState([])
+  const [exercises, setExercises] = useState([])
   const [form, setForm] = useState({ exercise:'', weight:'', reps:'1', note:'' })
+  const [suggestions, setSuggestions] = useState([])
+  const [saving, setSaving] = useState(false)
 
-  useEffect(() => { fetchRM() }, [])
+  useEffect(() => { fetchRM(); fetchExercises() }, [])
+
+  async function fetchExercises() {
+    const { data } = await supabase.from('exercises').select('name,category').order('name')
+    setExercises(data || [])
+  }
 
   async function fetchRM() {
     const { data } = await supabase.from('rm_records').select('*').eq('user_id', user.id).order('date', { ascending: false })
     setRecords(data || [])
   }
 
+  function handleExerciseInput(val) {
+    setForm({ ...form, exercise: val })
+    if (val.length < 2) { setSuggestions([]); return }
+    setSuggestions(exercises.filter(e => e.name.toLowerCase().includes(val.toLowerCase())).slice(0,6))
+  }
+
   async function saveRM() {
     if (!form.exercise || !form.weight) return
+    setSaving(true)
     await supabase.from('rm_records').insert({ ...form, user_id: user.id, date: new Date().toISOString().split('T')[0] })
-    setForm({ exercise:'', weight:'', reps:'1', note:'' }); fetchRM()
+    setForm({ exercise:'', weight:'', reps:'1', note:'' }); setSuggestions([]); setSaving(false); fetchRM()
   }
 
   const grouped = records.reduce((acc, r) => { if (!acc[r.exercise]) acc[r.exercise]=[]; acc[r.exercise].push(r); return acc }, {})
@@ -220,13 +235,27 @@ export function RMMaximo() {
     <div className="fade-in">
       <div className="card" style={{ marginBottom:'14px' }}>
         <div className="stitle" style={{ marginBottom:'12px' }}>Registrar nuevo RM</div>
-        <div className="field"><label>Ejercicio</label><input value={form.exercise} onChange={e=>setForm({...form,exercise:e.target.value})} placeholder="Ej: Sentadilla libre, Press plano..." /></div>
+        <div className="field" style={{ position:'relative' }}>
+          <label>Ejercicio</label>
+          <input value={form.exercise} onChange={e=>handleExerciseInput(e.target.value)} placeholder="Buscar ejercicio..." />
+          {suggestions.length > 0 && (
+            <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'var(--bg3)', border:'1px solid var(--border2)', borderRadius:'var(--radius)', zIndex:50, overflow:'hidden' }}>
+              {suggestions.map(s => (
+                <div key={s.name} onClick={() => { setForm({...form, exercise:s.name}); setSuggestions([]) }}
+                  style={{ padding:'8px 12px', cursor:'pointer', fontSize:'13px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between' }}>
+                  <span>{s.name}</span>
+                  <span style={{ fontSize:'11px', color:'var(--text3)' }}>{s.category}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="g2">
           <div className="field"><label>Peso (kg)</label><input type="number" step="0.5" value={form.weight} onChange={e=>setForm({...form,weight:e.target.value})} placeholder="80" /></div>
           <div className="field"><label>Repeticiones</label><input type="number" value={form.reps} onChange={e=>setForm({...form,reps:e.target.value})} placeholder="1" /></div>
         </div>
         <div className="field"><label>Nota (opcional)</label><input value={form.note} onChange={e=>setForm({...form,note:e.target.value})} placeholder="Condiciones, equipo..." /></div>
-        <button className="btn primary" style={{ width:'100%' }} onClick={saveRM}>Guardar RM</button>
+        <button className="btn primary" style={{ width:'100%' }} onClick={saveRM} disabled={saving}>{saving?'Guardando...':'Guardar RM'}</button>
       </div>
       {Object.keys(grouped).length === 0 && <div className="empty">Sin registros de RM aún.</div>}
       {Object.entries(grouped).map(([exercise, recs]) => {
