@@ -128,15 +128,15 @@ export default function Routines() {
                     <div style={{ fontWeight:600, fontSize:'13px', color:'var(--text)', marginBottom:'4px' }}>{ex.name}</div>
                     {ex.note && <div style={{ fontSize:'11px', color:'var(--text2)', fontStyle:'italic', marginBottom:'4px' }}>{ex.note}</div>}
                     <div style={{ background:'var(--bg3)', borderRadius:'8px', overflow:'hidden' }}>
-                      <div style={{ display:'grid', gridTemplateColumns:'60px repeat('+ex.series.length+', 1fr)', gap:'4px', padding:'6px 10px', fontSize:'9px', color:'var(--text3)', fontWeight:700, borderBottom:'1px solid var(--border)', textTransform:'uppercase' }}>
+                      <div style={{ display:'grid', gridTemplateColumns:`60px repeat(${ex.series.length}, 1fr)`, gap:'4px', padding:'6px 10px', fontSize:'9px', color:'var(--text3)', fontWeight:700, borderBottom:'1px solid var(--border)', textTransform:'uppercase' }}>
                         <span></span>
                         {ex.series.map((_,si) => <span key={si} style={{ textAlign:'center' }}>S{si+1}</span>)}
                       </div>
-                      <div style={{ display:'grid', gridTemplateColumns:'60px repeat('+ex.series.length+', 1fr)', gap:'4px', padding:'6px 10px', borderBottom:'1px solid var(--border)', fontSize:'12px' }}>
+                      <div style={{ display:'grid', gridTemplateColumns:`60px repeat(${ex.series.length}, 1fr)`, gap:'4px', padding:'6px 10px', borderBottom:'1px solid var(--border)', fontSize:'12px' }}>
                         <span style={{ color:'var(--text3)', fontSize:'10px', fontWeight:600 }}>REPS</span>
                         {ex.series.map((s,si) => <span key={si} style={{ textAlign:'center', color:'var(--text)' }}>{s.reps||'—'}</span>)}
                       </div>
-                      <div style={{ display:'grid', gridTemplateColumns:'60px repeat('+ex.series.length+', 1fr)', gap:'4px', padding:'6px 10px', fontSize:'12px' }}>
+                      <div style={{ display:'grid', gridTemplateColumns:`60px repeat(${ex.series.length}, 1fr)`, gap:'4px', padding:'6px 10px', fontSize:'12px' }}>
                         <span style={{ color:'var(--text3)', fontSize:'10px', fontWeight:600 }}>KG</span>
                         {ex.series.map((s,si) => <span key={si} style={{ textAlign:'center', color:'var(--green)', fontWeight:700 }}>{s.weight||'—'}</span>)}
                       </div>
