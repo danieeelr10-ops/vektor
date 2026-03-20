@@ -2,73 +2,81 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
+const EMPTY_EX = { exercise_id:'', name:'', sets:'', reps:'', weight:'', note:'' }
+
 export default function Routines() {
   const { user } = useAuth()
   const [routines, setRoutines] = useState([])
+  const [exercises, setExercises] = useState([])
   const [showModal, setShowModal] = useState(false)
-  const [form, setForm] = useState({ name:'', sport:'General', description:'' })
+  const [form, setForm] = useState({ name:'', sport:'General' })
+  const [items, setItems] = useState([{ ...EMPTY_EX }])
+  const [suggestions, setSuggestions] = useState({})
+  const [saving, setSaving] = useState(false)
   const sports = ['General','Fútbol','Atletismo','Natación','Baloncesto','Ciclismo','Tenis','Fuerza','Cardio','Gym']
 
-  useEffect(() => { fetchRoutines() }, [])
+  useEffect(() => { fetchRoutines(); fetchExercises() }, [])
+
+  async function fetchExercises() {
+    const { data } = await supabase.from('exercises').select('id,name,category').order('category').order('name')
+    setExercises(data || [])
+  }
 
   async function fetchRoutines() {
     const { data } = await supabase.from('routines').select('*').eq('coach_id', user.id).order('created_at', { ascending:false })
     setRoutines(data || [])
   }
 
+  function handleExInput(idx, val) {
+    const updated = [...items]
+    updated[idx] = { ...updated[idx], name: val }
+    setItems(updated)
+    if (val.length < 2) { setSuggestions(s => ({ ...s, [idx]:[] })); return }
+    setSuggestions(s => ({ ...s, [idx]: exercises.filter(e => e.name.toLowerCase().includes(val.toLowerCase())).slice(0,5) }))
+  }
+
+  function selectEx(idx, ex) {
+    const updated = [...items]
+    updated[idx] = { ...updated[idx], name: ex.name, exercise_id: ex.id }
+    setItems(updated)
+    setSuggestions(s => ({ ...s, [idx]:[] }))
+  }
+
+  function updateItem(idx, field, val) {
+    const updated = [...items]
+    updated[idx] = { ...updated[idx], [field]: val }
+    setItems(updated)
+  }
+
+  function addItem() { setItems([...items, { ...EMPTY_EX }]) }
+  function removeItem(idx) { setItems(items.filter((_,i) => i !== idx)) }
+
   async function saveRoutine() {
-    if (!form.name) return
-    await supabase.from('routines').insert({ ...form, coach_id: user.id })
-    setShowModal(false); setForm({ name:'', sport:'General', description:'' }); fetchRoutines()
+    if (!form.name || items.every(i => !i.name)) return
+    setSaving(true)
+    const description = items.filter(i => i.name).map(i =>
+      `${i.name}: ${i.sets||'?'} series × ${i.reps||'?'} reps${i.weight ? ` @ ${i.weight}kg` : ''}${i.note ? ` (${i.note})` : ''}`
+    ).join('\n')
+    await supabase.from('routines').insert({ name: form.name, sport: form.sport, description, coach_id: user.id, exercises_data: JSON.stringify(items.filter(i=>i.name)) })
+    setSaving(false)
+    setShowModal(false)
+    setForm({ name:'', sport:'General' })
+    setItems([{ ...EMPTY_EX }])
+    fetchRoutines()
   }
 
   async function deleteRoutine(id) {
     if (!confirm('¿Eliminar esta rutina?')) return
-    await supabase.from('routines').delete().eq('id', id); fetchRoutines()
+    await supabase.from('routines').delete().eq('id', id)
+    fetchRoutines()
+  }
+
+  function parseDescription(desc) {
+    if (!desc) return []
+    return desc.split('\n').filter(Boolean)
   }
 
   return (
     <div className="fade-in">
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
-        <span className="stitle">Rutinas ({routines.length})</span>
-        <button className="btn primary sm" onClick={() => setShowModal(true)}>+ Rutina</button>
-      </div>
-      {!routines.length && <div className="empty">Crea tu primera rutina para asignarla a atletas.</div>}
-      {routines.map(r => (
-        <div className="card" key={r.id} style={{ marginBottom:'10px' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
-            <div>
-              <div style={{ fontWeight:700, fontSize:'14px', marginBottom:'4px' }}>{r.name}</div>
-              <span className="badge blue">{r.sport}</span>
-            </div>
-            <button className="btn danger sm" onClick={() => deleteRoutine(r.id)}>Eliminar</button>
-          </div>
-          {r.description && (
-            <div style={{ marginTop:'10px', fontSize:'13px', color:'var(--text2)', whiteSpace:'pre-line', background:'var(--bg3)', padding:'10px 12px', borderRadius:'8px', fontFamily:'var(--mono)', lineHeight:1.8 }}>
-              {r.description}
-            </div>
-          )}
-        </div>
-      ))}
-
-      {showModal && (
-        <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowModal(false)}>
-          <div className="modal">
-            <h3>Nueva rutina</h3>
-            <div className="field"><label>Nombre</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Fuerza tren inferior" /></div>
-            <div className="field"><label>Deporte / categoría</label>
-              <select value={form.sport} onChange={e=>setForm({...form,sport:e.target.value})}>
-                {sports.map(s=><option key={s}>{s}</option>)}
-              </select></div>
-            <div className="field"><label>Ejercicios / descripción</label>
-              <textarea rows={6} value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder={'Sentadilla: 4x8 @ 75%\nPeso muerto: 3x6\nLunge: 3x12 cada pierna'} /></div>
-            <div style={{ display:'flex', gap:'8px', justifyContent:'flex-end' }}>
-              <button className="btn" onClick={() => setShowModal(false)}>Cancelar</button>
-              <button className="btn primary" onClick={saveRoutine}>Guardar</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+        <span className="stitle">Rutinas ({routines.length})</s
