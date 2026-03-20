@@ -26,7 +26,7 @@ export default function AthleteProfile({ athlete, onBack }) {
 
   async function fetchAll() {
     const [{ data: s }, { data: m }, { data: r }, { data: ro }] = await Promise.all([
-      supabase.from('sessions').select('*, routines(name)').eq('athlete_id', athlete.id).order('date', { ascending: false }),
+      supabase.from('sessions').select('*, routines(name,exercises_data)').eq('athlete_id', athlete.id).order('date', { ascending: false }),
       supabase.from('metrics').select('*').eq('user_id', athlete.id).order('date', { ascending: false }),
       supabase.from('rm_records').select('*').eq('user_id', athlete.id).order('date', { ascending: false }),
       supabase.from('routines').select('id,name').eq('coach_id', user.id).order('name')
@@ -177,25 +177,105 @@ export default function AthleteProfile({ athlete, onBack }) {
             <button className="btn primary sm" onClick={() => { setSelectedDate(today); setShowAssign(true) }}>+ Sesión</button>
           </div>
           {sessions.length === 0 && <div className="empty">Sin sesiones asignadas.</div>}
-          {sessions.map(s => (
-            <div key={s.id} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '14px 16px', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '14px' }}>{s.routines?.name || '—'}</div>
-                  <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>{s.date}</div>
+          {sessions.map(s => {
+            const execData = (() => { try { return s.execution_data ? JSON.parse(s.execution_data) : null } catch { return null } })()
+            const routineExData = (() => { try { return s.routines?.exercises_data ? JSON.parse(s.routines.exercises_data) : null } catch { return null } })()
+            return (
+              <div key={s.id} style={{ background: '#111', border: `1px solid ${s.completed ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '14px' }}>{s.routines?.name || '—'}</div>
+                    <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>{s.date}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {s.completed
+                      ? <span style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>Completada</span>
+                      : <span style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>Pendiente</span>
+                    }
+                    {!s.completed && <button className="btn danger sm" onClick={() => deleteSession(s.id)}>×</button>}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {s.completed
-                    ? <span style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>Completada</span>
-                    : <span style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>Pendiente</span>
-                  }
-                  {!s.completed && <button className="btn danger sm" onClick={() => deleteSession(s.id)}>×</button>}
-                </div>
+
+                {s.completed && (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '10px' }}>
+                      <div style={{ background: '#1a1a1a', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '9px', color: '#555', textTransform: 'uppercase', fontWeight: 700 }}>RPE</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#4ade80', fontFamily: 'monospace' }}>{s.rpe}</div>
+                      </div>
+                      <div style={{ background: '#1a1a1a', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '9px', color: '#555', textTransform: 'uppercase', fontWeight: 700 }}>Duración</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#4ade80', fontFamily: 'monospace' }}>{s.duration}<span style={{ fontSize: '11px' }}> min</span></div>
+                      </div>
+                      <div style={{ background: '#1a1a1a', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '9px', color: '#555', textTransform: 'uppercase', fontWeight: 700 }}>Nota</div>
+                        <div style={{ fontSize: '11px', color: '#aaa', marginTop: '4px', fontStyle: 'italic' }}>{s.log_notes || '—'}</div>
+                      </div>
+                    </div>
+
+                    {routineExData && routineExData.map((ex, exIdx) => {
+                      const nSeries = ex.series?.length || 0
+                      if (!nSeries) return null
+                      let maxWeight = 0, totalVol = 0
+                      ex.series.forEach((_, si) => {
+                        const rKey = `${s.id}-${exIdx}-${si}-reps`
+                        const wKey = `${s.id}-${exIdx}-${si}-weight`
+                        const execObj = execData || {}
+                        const r = parseFloat(execObj[rKey]) || 0
+                        const w = parseFloat(execObj[wKey]) || 0
+                        if (w > maxWeight) maxWeight = w
+                        totalVol += r * w
+                      })
+                      return (
+                        <div key={exIdx} style={{ marginBottom: '12px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '13px', color: '#f0f0f0', marginBottom: '6px' }}>{ex.name}</div>
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', fontSize: '12px' }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                                  <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Serie</th>
+                                  <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Reps plan</th>
+                                  <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: '9px', color: '#4ade80', fontWeight: 700, textTransform: 'uppercase' }}>Kg plan</th>
+                                  <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Reps real</th>
+                                  <th style={{ padding: '6px 8px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Kg real</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {ex.series.map((serie, si) => {
+                                  const execObj = execData || {}
+                                  const realReps = execObj[`${s.id}-${exIdx}-${si}-reps`] || '—'
+                                  const realWeight = execObj[`${s.id}-${exIdx}-${si}-weight`] || '—'
+                                  return (
+                                    <tr key={si} style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                                      <td style={{ padding: '8px', color: '#4ade80', fontWeight: 700 }}>S{si+1}</td>
+                                      <td style={{ padding: '8px', textAlign: 'center', color: '#aaa' }}>{serie.reps||'—'}</td>
+                                      <td style={{ padding: '8px', textAlign: 'center', color: '#4ade80', fontWeight: 700 }}>{serie.weight ? `${serie.weight}kg` : '—'}</td>
+                                      <td style={{ padding: '8px', textAlign: 'center', color: '#60a5fa', fontWeight: 600 }}>{realReps}</td>
+                                      <td style={{ padding: '8px', textAlign: 'center', color: '#60a5fa', fontWeight: 600 }}>{realWeight !== '—' ? `${realWeight}kg` : '—'}</td>
+                                    </tr>
+                                  )
+                                })}
+                                <tr style={{ background: '#222' }}>
+                                  <td colSpan={3} style={{ padding: '6px 8px', fontSize: '10px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Resultados</td>
+                                  <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                    <span style={{ color: '#fbbf24', fontWeight: 700, fontSize: '11px' }}>Máx: {maxWeight > 0 ? `${maxWeight}kg` : '—'}</span>
+                                  </td>
+                                  <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                                    <span style={{ color: '#a78bfa', fontWeight: 700, fontSize: '11px' }}>Vol: {totalVol > 0 ? totalVol : '—'}</span>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </>
+                )}
+                {s.notes && !s.completed && <div style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>📋 {s.notes}</div>}
               </div>
-              {s.completed && <div style={{ fontSize: '12px', color: '#aaa', marginTop: '6px' }}>RPE {s.rpe} · {s.duration} min{s.log_notes ? ` · "${s.log_notes}"` : ''}</div>}
-              {s.notes && !s.completed && <div style={{ fontSize: '12px', color: '#555', marginTop: '4px' }}>📋 {s.notes}</div>}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
