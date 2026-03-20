@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
-const EMPTY_EX = { exercise_id:'', name:'', sets:'', reps:'', weight:'', note:'' }
+const newExercise = () => ({ name:'', exercise_id:'', note:'', series:[ {reps:'', weight:''} ] })
 
 export default function Routines() {
   const { user } = useAuth()
@@ -10,7 +10,7 @@ export default function Routines() {
   const [exercises, setExercises] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ name:'', sport:'General' })
-  const [items, setItems] = useState([{ ...EMPTY_EX }])
+  const [items, setItems] = useState([ newExercise() ])
   const [suggestions, setSuggestions] = useState({})
   const [saving, setSaving] = useState(false)
   const sports = ['General','Fútbol','Atletismo','Natación','Baloncesto','Ciclismo','Tenis','Fuerza','Cardio','Gym']
@@ -42,38 +42,63 @@ export default function Routines() {
     setSuggestions(s => ({ ...s, [idx]:[] }))
   }
 
-  function updateItem(idx, field, val) {
+  function updateNote(idx, val) {
     const updated = [...items]
-    updated[idx] = { ...updated[idx], [field]: val }
+    updated[idx] = { ...updated[idx], note: val }
     setItems(updated)
   }
 
-  function addItem() { setItems([...items, { ...EMPTY_EX }]) }
-  function removeItem(idx) { setItems(items.filter((_,i) => i !== idx)) }
+  function addSerie(idx) {
+    const updated = [...items]
+    updated[idx].series = [...updated[idx].series, { reps:'', weight:'' }]
+    setItems(updated)
+  }
+
+  function removeSerie(idx, sIdx) {
+    const updated = [...items]
+    if (updated[idx].series.length <= 1) return
+    updated[idx].series = updated[idx].series.filter((_,i) => i !== sIdx)
+    setItems(updated)
+  }
+
+  function updateSerie(idx, sIdx, field, val) {
+    const updated = [...items]
+    updated[idx].series[sIdx] = { ...updated[idx].series[sIdx], [field]: val }
+    setItems(updated)
+  }
+
+  function addExercise() { setItems([...items, newExercise()]) }
+  function removeExercise(idx) { if (items.length > 1) setItems(items.filter((_,i) => i !== idx)) }
 
   async function saveRoutine() {
     if (!form.name || items.every(i => !i.name)) return
     setSaving(true)
-    const description = items.filter(i => i.name).map(i =>
-      `${i.name}: ${i.sets||'?'} series × ${i.reps||'?'} reps${i.weight ? ` @ ${i.weight}kg` : ''}${i.note ? ` (${i.note})` : ''}`
+    const exercises_data = items.filter(i => i.name).map(i => ({
+      name: i.name,
+      exercise_id: i.exercise_id,
+      note: i.note,
+      series: i.series
+    }))
+    const description = exercises_data.map(ex =>
+      ex.series.map((s,si) => `${ex.name} — S${si+1}: ${s.reps||'?'} reps @ ${s.weight||'?'}kg`).join('\n')
     ).join('\n')
-    await supabase.from('routines').insert({ name: form.name, sport: form.sport, description, coach_id: user.id, exercises_data: JSON.stringify(items.filter(i=>i.name)) })
-    setSaving(false)
-    setShowModal(false)
-    setForm({ name:'', sport:'General' })
-    setItems([{ ...EMPTY_EX }])
+    await supabase.from('routines').insert({
+      name: form.name, sport: form.sport, description,
+      coach_id: user.id,
+      exercises_data: JSON.stringify(exercises_data)
+    })
+    setSaving(false); setShowModal(false)
+    setForm({ name:'', sport:'General' }); setItems([newExercise()])
     fetchRoutines()
   }
 
   async function deleteRoutine(id) {
     if (!confirm('¿Eliminar esta rutina?')) return
-    await supabase.from('routines').delete().eq('id', id)
-    fetchRoutines()
+    await supabase.from('routines').delete().eq('id', id); fetchRoutines()
   }
 
-  function parseDescription(desc) {
-    if (!desc) return []
-    return desc.split('\n').filter(Boolean)
+  function getExercisesData(r) {
+    try { return r.exercises_data ? JSON.parse(r.exercises_data) : null } catch { return null }
   }
 
   return (
@@ -85,42 +110,52 @@ export default function Routines() {
 
       {!routines.length && <div className="empty">Crea tu primera rutina para asignarla a atletas.</div>}
 
-      {routines.map(r => (
-        <div className="card" key={r.id} style={{ marginBottom:'10px' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
-            <div>
-              <div style={{ fontWeight:700, fontSize:'14px', marginBottom:'4px' }}>{r.name}</div>
-              <span className="badge blue">{r.sport}</span>
-            </div>
-            <button className="btn danger sm" onClick={() => deleteRoutine(r.id)}>Eliminar</button>
-          </div>
-          {r.description && (
-            <div style={{ marginTop:'10px', background:'var(--bg3)', borderRadius:'8px', overflow:'hidden' }}>
-              <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:'6px', padding:'8px 10px', fontSize:'9px', color:'var(--text3)', fontWeight:700, borderBottom:'1px solid var(--border)', textTransform:'uppercase', letterSpacing:'.04em' }}>
-                <span>Ejercicio</span><span style={{ textAlign:'center' }}>Series</span><span style={{ textAlign:'center' }}>Reps</span><span style={{ textAlign:'center' }}>Peso</span>
+      {routines.map(r => {
+        const exData = getExercisesData(r)
+        return (
+          <div className="card" key={r.id} style={{ marginBottom:'10px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:'14px', marginBottom:'4px' }}>{r.name}</div>
+                <span className="badge blue">{r.sport}</span>
               </div>
-              {parseDescription(r.description).map((line, i) => {
-                const match = line.match(/^(.+?):\s*(\S+)\s*series\s*×\s*(\S+)\s*reps(?:\s*@\s*(\S+)kg)?/)
-                if (match) return (
-                  <div key={i} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:'6px', padding:'8px 10px', fontSize:'12px', borderBottom:'1px solid var(--border)' }}>
-                    <span style={{ fontWeight:500 }}>{match[1]}</span>
-                    <span style={{ textAlign:'center', color:'var(--green)', fontWeight:700 }}>{match[2]}</span>
-                    <span style={{ textAlign:'center' }}>{match[3]}</span>
-                    <span style={{ textAlign:'center', color:'var(--text2)' }}>{match[4] ? `${match[4]}kg` : '—'}</span>
-                  </div>
-                )
-                return <div key={i} style={{ padding:'6px 10px', fontSize:'12px', color:'var(--text2)', borderBottom:'1px solid var(--border)' }}>{line}</div>
-              })}
+              <button className="btn danger sm" onClick={() => deleteRoutine(r.id)}>Eliminar</button>
             </div>
-          )}
-        </div>
-      ))}
+            {exData ? (
+              <div style={{ marginTop:'10px' }}>
+                {exData.map((ex, ei) => (
+                  <div key={ei} style={{ marginBottom:'10px' }}>
+                    <div style={{ fontWeight:600, fontSize:'13px', color:'var(--text)', marginBottom:'4px' }}>{ex.name}</div>
+                    {ex.note && <div style={{ fontSize:'11px', color:'var(--text2)', fontStyle:'italic', marginBottom:'4px' }}>{ex.note}</div>}
+                    <div style={{ background:'var(--bg3)', borderRadius:'8px', overflow:'hidden' }}>
+                      <div style={{ display:'grid', gridTemplateColumns:'60px repeat('+ex.series.length+', 1fr)', gap:'4px', padding:'6px 10px', fontSize:'9px', color:'var(--text3)', fontWeight:700, borderBottom:'1px solid var(--border)', textTransform:'uppercase' }}>
+                        <span></span>
+                        {ex.series.map((_,si) => <span key={si} style={{ textAlign:'center' }}>S{si+1}</span>)}
+                      </div>
+                      <div style={{ display:'grid', gridTemplateColumns:'60px repeat('+ex.series.length+', 1fr)', gap:'4px', padding:'6px 10px', borderBottom:'1px solid var(--border)', fontSize:'12px' }}>
+                        <span style={{ color:'var(--text3)', fontSize:'10px', fontWeight:600 }}>REPS</span>
+                        {ex.series.map((s,si) => <span key={si} style={{ textAlign:'center', color:'var(--text)' }}>{s.reps||'—'}</span>)}
+                      </div>
+                      <div style={{ display:'grid', gridTemplateColumns:'60px repeat('+ex.series.length+', 1fr)', gap:'4px', padding:'6px 10px', fontSize:'12px' }}>
+                        <span style={{ color:'var(--text3)', fontSize:'10px', fontWeight:600 }}>KG</span>
+                        {ex.series.map((s,si) => <span key={si} style={{ textAlign:'center', color:'var(--green)', fontWeight:700 }}>{s.weight||'—'}</span>)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : r.description && (
+              <div style={{ fontSize:'12px', color:'var(--text2)', whiteSpace:'pre-line', background:'var(--bg3)', padding:'10px', borderRadius:'8px', marginTop:'8px' }}>{r.description}</div>
+            )}
+          </div>
+        )
+      })}
 
       {showModal && (
         <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowModal(false)}>
-          <div className="modal" style={{ maxWidth:'500px' }}>
+          <div className="modal" style={{ maxWidth:'520px' }}>
             <h3>Nueva rutina</h3>
-            <div className="g2" style={{ marginBottom:'10px' }}>
+            <div className="g2" style={{ marginBottom:'14px' }}>
               <div className="field"><label>Nombre</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Fuerza tren inferior" /></div>
               <div className="field"><label>Deporte</label>
                 <select value={form.sport} onChange={e=>setForm({...form,sport:e.target.value})}>
@@ -129,42 +164,50 @@ export default function Routines() {
               </div>
             </div>
 
-            <div className="stitle" style={{ marginBottom:'8px' }}>Ejercicios</div>
-
-            <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 28px', gap:'6px', marginBottom:'6px' }}>
-              {['Ejercicio','Series','Reps','Peso (kg)',''].map((h,i) => (
-                <div key={i} style={{ fontSize:'9px', color:'var(--text3)', fontWeight:700, textTransform:'uppercase', letterSpacing:'.04em' }}>{h}</div>
-              ))}
-            </div>
-
             {items.map((item, idx) => (
-              <div key={idx} style={{ position:'relative', marginBottom:'6px' }}>
-                <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 28px', gap:'6px' }}>
-                  <div style={{ position:'relative' }}>
+              <div key={idx} style={{ background:'var(--bg3)', borderRadius:'10px', padding:'12px', marginBottom:'10px', position:'relative' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'8px' }}>
+                  <div style={{ flex:1, position:'relative' }}>
                     <input value={item.name} onChange={e=>handleExInput(idx,e.target.value)} placeholder="Buscar ejercicio..." style={{ marginBottom:0 }} />
                     {suggestions[idx]?.length > 0 && (
-                      <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'var(--bg3)', border:'1px solid var(--border2)', borderRadius:'var(--radius)', zIndex:100, overflow:'hidden' }}>
+                      <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'var(--bg2)', border:'1px solid var(--border2)', borderRadius:'var(--radius)', zIndex:100, overflow:'hidden' }}>
                         {suggestions[idx].map(s => (
                           <div key={s.id} onClick={() => selectEx(idx,s)} style={{ padding:'7px 10px', cursor:'pointer', fontSize:'12px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between' }}>
-                            <span>{s.name}</span>
-                            <span style={{ fontSize:'10px', color:'var(--text3)' }}>{s.category}</span>
+                            <span>{s.name}</span><span style={{ fontSize:'10px', color:'var(--text3)' }}>{s.category}</span>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-                  <input type="number" value={item.sets} onChange={e=>updateItem(idx,'sets',e.target.value)} placeholder="4" style={{ marginBottom:0, textAlign:'center' }} />
-                  <input value={item.reps} onChange={e=>updateItem(idx,'reps',e.target.value)} placeholder="12" style={{ marginBottom:0, textAlign:'center' }} />
-                  <input type="number" step="0.5" value={item.weight} onChange={e=>updateItem(idx,'weight',e.target.value)} placeholder="0" style={{ marginBottom:0, textAlign:'center' }} />
-                  <button onClick={() => removeItem(idx)} style={{ background:'transparent', border:'none', color:'var(--text3)', cursor:'pointer', fontSize:'16px', padding:0, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+                  {items.length > 1 && <button onClick={() => removeExercise(idx)} style={{ background:'transparent', border:'none', color:'var(--red)', cursor:'pointer', fontSize:'18px', padding:'0 4px' }}>×</button>}
+                </div>
+
+                <input value={item.note} onChange={e=>updateNote(idx,e.target.value)} placeholder="Nota / indicación (opcional)" style={{ marginBottom:'8px', fontSize:'12px' }} />
+
+                <div style={{ marginBottom:'6px' }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'50px 1fr 1fr 28px', gap:'6px', marginBottom:'4px' }}>
+                    <div style={{ fontSize:'9px', color:'var(--text3)', fontWeight:700, textTransform:'uppercase', paddingTop:'4px' }}>Serie</div>
+                    <div style={{ fontSize:'9px', color:'var(--text3)', fontWeight:700, textTransform:'uppercase', paddingTop:'4px' }}>Reps</div>
+                    <div style={{ fontSize:'9px', color:'var(--text3)', fontWeight:700, textTransform:'uppercase', paddingTop:'4px' }}>Peso (kg)</div>
+                    <div></div>
+                  </div>
+                  {item.series.map((s, si) => (
+                    <div key={si} style={{ display:'grid', gridTemplateColumns:'50px 1fr 1fr 28px', gap:'6px', marginBottom:'4px', alignItems:'center' }}>
+                      <div style={{ fontSize:'12px', color:'var(--green)', fontWeight:700, textAlign:'center' }}>S{si+1}</div>
+                      <input type="number" value={s.reps} onChange={e=>updateSerie(idx,si,'reps',e.target.value)} placeholder="10" style={{ marginBottom:0, textAlign:'center' }} />
+                      <input type="number" step="0.5" value={s.weight} onChange={e=>updateSerie(idx,si,'weight',e.target.value)} placeholder="20" style={{ marginBottom:0, textAlign:'center' }} />
+                      <button onClick={() => removeSerie(idx,si)} style={{ background:'transparent', border:'none', color:'var(--text3)', cursor:'pointer', fontSize:'16px', padding:0, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
+                    </div>
+                  ))}
+                  <button className="btn sm" style={{ width:'100%', marginTop:'4px', fontSize:'11px' }} onClick={() => addSerie(idx)}>+ Serie</button>
                 </div>
               </div>
             ))}
 
-            <button className="btn sm" style={{ width:'100%', marginTop:'8px', marginBottom:'16px' }} onClick={addItem}>+ Agregar ejercicio</button>
+            <button className="btn sm" style={{ width:'100%', marginBottom:'14px' }} onClick={addExercise}>+ Agregar ejercicio</button>
 
             <div style={{ display:'flex', gap:'8px', justifyContent:'flex-end' }}>
-              <button className="btn" onClick={() => { setShowModal(false); setItems([{ ...EMPTY_EX }]) }}>Cancelar</button>
+              <button className="btn" onClick={() => { setShowModal(false); setItems([newExercise()]) }}>Cancelar</button>
               <button className="btn primary" onClick={saveRoutine} disabled={saving}>{saving?'Guardando...':'Guardar rutina'}</button>
             </div>
           </div>
