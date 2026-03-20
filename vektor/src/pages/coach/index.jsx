@@ -4,12 +4,14 @@ import Athletes from './Athletes'
 import Routines from './Routines'
 import Sessions from './Sessions'
 import Calendar from '../shared/Calendar'
+import CoachMetrics from './Metrics'
 
 const TABS = [
   { id:'athletes', label:'Atletas' },
   { id:'routines', label:'Rutinas' },
   { id:'sessions', label:'Sesiones' },
   { id:'calendar', label:'Calendario' },
+  { id:'metrics', label:'Métricas' },
 ]
 
 export default function CoachDashboard() {
@@ -29,16 +31,23 @@ export default function CoachDashboard() {
           <button className="btn sm ghost" onClick={signOut}>Salir</button>
         </div>
       </div>
+      <div style={{ display:'flex', background:'var(--bg2)', borderBottom:'1px solid var(--border)', padding:'0 20px', gap:'2px', overflowX:'auto' }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            padding:'12px 14px', border:'none', background:'transparent',
+            color: tab===t.id ? 'var(--green)' : 'var(--text2)',
+            fontFamily:'var(--font)', fontSize:'12px', fontWeight:600,
+            cursor:'pointer', borderBottom:`2px solid ${tab===t.id?'var(--green)':'transparent'}`,
+            whiteSpace:'nowrap', transition:'all .15s'
+          }}>{t.label}</button>
+        ))}
+      </div>
       <div className="page">
-        <div className="tabs">
-          {TABS.map(t => (
-            <button key={t.id} className={`tab-btn ${tab===t.id?'active':''}`} onClick={() => setTab(t.id)}>{t.label}</button>
-          ))}
-        </div>
         {tab==='athletes' && <Athletes />}
         {tab==='routines' && <Routines />}
         {tab==='sessions' && <Sessions />}
         {tab==='calendar' && <Calendar />}
+        {tab==='metrics' && <CoachMetrics />}
       </div>
     </div>
   )
