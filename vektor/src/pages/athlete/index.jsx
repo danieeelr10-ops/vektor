@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { History, Metrics, RMMaximo, Progress } from './Tabs'
+import { Metrics, RMMaximo, Progress } from './Tabs'
 import AthleteCalendar from './AthleteCalendar'
+import SessionHistory from './SessionHistory'
 
 export default function AthleteDashboard() {
   const { profile, signOut } = useAuth()
@@ -44,7 +45,7 @@ export default function AthleteDashboard() {
       </div>
       <div className="page">
         {tab === 'calendar' && <AthleteCalendar />}
-        {tab === 'history' && <History />}
+        {tab === 'history' && <SessionHistory />}
         {tab === 'metrics' && <Metrics />}
         {tab === 'rm' && <RMMaximo />}
         {tab === 'progress' && <Progress />}

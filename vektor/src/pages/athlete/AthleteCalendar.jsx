@@ -258,7 +258,8 @@ export default function AthleteCalendar() {
                   <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: isToday ? 700 : 400, color: isToday ? '#4ade80' : '#f0f0f0' }}>{dayNum}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '3px' }}>
                     {ss.slice(0, 2).map(s => (
-                      <div key={s.id} style={{ fontSize: '9px', background: s.completed ? 'rgba(74,222,128,0.15)' : 'rgba(251,191,36,0.12)', color: s.completed ? '#4ade80' : '#fbbf24', borderRadius: '3px', padding: '1px 3px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      <div key={s.id} style={{ fontSize: '9px', background: s.completed ? 'rgba(74,222,128,0.15)' : 'rgba(251,191,36,0.12)', color: s.completed ? '#4ade80' : '#fbbf24', borderRadius: '3px', padding: '1px 3px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        {s.completed && <span style={{ fontWeight: 700, fontSize: '9px' }}>✓</span>}
                         {s.routines?.name || 'Sesión'}
                       </div>
                     ))}
