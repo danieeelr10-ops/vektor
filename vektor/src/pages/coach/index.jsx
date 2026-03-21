@@ -2,14 +2,12 @@ import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import Athletes from './Athletes'
 import Routines from './Routines'
-import Sessions from './Sessions'
 import CoachAgenda from './Agenda'
 import CoachMetrics from './Metrics'
 
 const TABS = [
   { id:'athletes', label:'Atletas' },
   { id:'routines', label:'Rutinas' },
-  { id:'sessions', label:'Sesiones' },
   { id:'agenda', label:'Agenda' },
   { id:'metrics', label:'Métricas' },
 ]
@@ -45,7 +43,6 @@ export default function CoachDashboard() {
       <div className="page">
         {tab==='athletes' && <Athletes />}
         {tab==='routines' && <Routines />}
-        {tab==='sessions' && <Sessions />}
         {tab==='agenda' && <CoachAgenda />}
         {tab==='metrics' && <CoachMetrics />}
       </div>
