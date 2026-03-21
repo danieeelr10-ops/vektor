@@ -177,10 +177,7 @@ export default function AthleteProfile({ athlete, onBack }) {
                     </div>
                   </div>
                 ))}
-                <button className="btn primary sm" style={{ width: '100%', marginTop: '8px' }}
-                  onClick={() => { setAssignForm(f => ({ ...f, routine_id: r.id })); setSelectedDate(today); setShowAssign(true) }}>
-                  Asignar a {athleteData.name.split(' ')[0]}
-                </button>
+
               </div>
             )
           })}
