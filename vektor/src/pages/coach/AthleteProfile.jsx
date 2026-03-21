@@ -10,7 +10,7 @@ function toISO(y, m, d) {
   return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
 }
 
-export default function AthleteProfile({ athlete, onBack }) {
+export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const { user } = useAuth()
   const [athleteData, setAthleteData] = useState({ ...athlete })
   const [tab, setTab] = useState(athlete.mode !== 'presencial' ? 'routines' : 'calendar')
@@ -129,12 +129,13 @@ export default function AthleteProfile({ athlete, onBack }) {
   async function saveEdit() {
     setEditSaving(true)
     await supabase.from('profiles').update({ name: editForm.name, sport: editForm.sport, mode: editForm.mode }).eq('id', athlete.id)
-    setAthleteData(prev => ({ ...prev, ...editForm }))
+    const updated = { ...athleteData, ...editForm }
+    setAthleteData(updated)
     setEditSaving(false); setShowEdit(false)
-    // Update tab if mode changed
     if (editForm.mode !== athleteData.mode) {
       setTab(editForm.mode !== 'presencial' ? 'routines' : 'calendar')
     }
+    if (onUpdate) onUpdate(updated)
   }
 
   const rmGrouped = rmRecords.reduce((acc, r) => {

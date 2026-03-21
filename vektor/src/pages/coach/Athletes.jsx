@@ -83,7 +83,7 @@ export default function Athletes() {
   }
 
   if (selected) {
-    return <AthleteProfile athlete={selected} onBack={() => { setSelected(null); fetchAll() }} />
+    return <AthleteProfile athlete={selected} onBack={() => { setSelected(null); fetchAll() }} onUpdate={(updated) => setSelected({ ...selected, ...updated })} />
   }
 
   return (
