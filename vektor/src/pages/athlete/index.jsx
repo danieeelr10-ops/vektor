@@ -1,20 +1,20 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { Today, History, Metrics, RMMaximo, Progress } from './Tabs'
-import Calendar from '../shared/Calendar'
-
-const TABS = [
-  { id: 'today', label: 'Hoy' },
-  { id: 'calendar', label: 'Calendario' },
-  { id: 'history', label: 'Historial' },
-  { id: 'metrics', label: 'Métricas' },
-  { id: 'rm', label: 'RM' },
-  { id: 'progress', label: 'Progreso' },
-]
+import { History, Metrics, RMMaximo, Progress } from './Tabs'
+import AthleteCalendar from './AthleteCalendar'
 
 export default function AthleteDashboard() {
   const { profile, signOut } = useAuth()
-  const [tab, setTab] = useState('today')
+  const [tab, setTab] = useState('calendar')
+  const isOnline = profile?.mode !== 'presencial'
+
+  const TABS = [
+    { id: 'calendar', label: 'Calendario' },
+    { id: 'history', label: 'Historial' },
+    { id: 'metrics', label: 'Métricas' },
+    { id: 'rm', label: 'RM' },
+    { id: 'progress', label: 'Progreso' },
+  ]
 
   return (
     <div>
@@ -22,6 +22,9 @@ export default function AthleteDashboard() {
         <div className="logo">
           <div className="logo-mark">V</div>
           Vektor <span>Training</span>
+          <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px', background: isOnline ? 'rgba(96,165,250,0.15)' : 'rgba(167,139,250,0.15)', color: isOnline ? '#60a5fa' : '#a78bfa' }}>
+            {isOnline ? 'Online' : 'Presencial'}
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '12px', color: 'var(--text2)' }}>{profile?.name}</span>
@@ -40,8 +43,7 @@ export default function AthleteDashboard() {
         ))}
       </div>
       <div className="page">
-        {tab === 'today' && <Today />}
-        {tab === 'calendar' && <Calendar />}
+        {tab === 'calendar' && <AthleteCalendar />}
         {tab === 'history' && <History />}
         {tab === 'metrics' && <Metrics />}
         {tab === 'rm' && <RMMaximo />}
