@@ -283,12 +283,16 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
               const hasCompleted = ss.some(s => s.completed)
               const hasPending = ss.some(s => !s.completed)
               return (
-                <div key={i} onClick={() => valid && ss.length && setShowDayDetail({ date: dateStr, sessions: ss })}
+                <div key={i} onClick={() => {
+                    if (!valid) return
+                    if (ss.length) setShowDayDetail({ date: dateStr, sessions: ss })
+                    else { setSelectedDate(dateStr); isOnline ? setShowAssign(true) : setShowPresencial(true) }
+                  }}
                   style={{
                     background: !valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.08)' : isToday ? 'rgba(74,222,128,0.04)' : '#111',
                     border: `1px solid ${!valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.35)' : hasPending ? 'rgba(251,191,36,0.25)' : isToday ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`,
                     borderRadius: '8px', padding: '5px 3px', minHeight: '52px',
-                    cursor: valid && ss.length ? 'pointer' : 'default',
+                    cursor: valid ? 'pointer' : 'default',
                     position: 'relative'
                   }}>
                   {valid && (
@@ -315,9 +319,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
             {isOnline && <span><span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#fbbf24', marginRight: '4px' }}></span>Pendiente</span>}
             {!isOnline && <span><span style={{ display: 'inline-block', width: '14px', height: '4px', borderRadius: '2px', background: '#a78bfa', marginRight: '4px', verticalAlign: 'middle' }}></span>Nota</span>}
           </div>
-          <div style={{ marginTop: '10px', fontSize: '11px', color: '#555', textAlign: 'center' }}>
-            {isOnline ? 'Click en un día para asignar una sesión' : 'Click en un día para registrar la sesión'}
-          </div>
+          <div style={{ marginTop: '10px', fontSize: '11px', color: '#555', textAlign: 'center' }}>Click en un día para asignar o ver sesiones</div>
         </div>
       )}
 
