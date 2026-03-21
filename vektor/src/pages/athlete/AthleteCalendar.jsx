@@ -81,14 +81,26 @@ export default function AthleteCalendar() {
   async function completeSession() {
     if (!selectedSession) return
     setSaving(true)
-    await supabase.from('sessions').update({
-      completed: true, rpe: rpe || '?',
-      duration: logForm.duration, log_notes: logForm.log_notes,
+    const payload = {
+      completed: true,
+      rpe: rpe ? String(rpe) : '?',
+      duration: logForm.duration || null,
+      log_notes: logForm.log_notes || null,
       execution_data: JSON.stringify(execution)
-    }).eq('id', selectedSession.id)
+    }
+    const { error } = await supabase
+      .from('sessions')
+      .update(payload)
+      .eq('id', selectedSession.id)
+      .eq('athlete_id', user.id)
+    if (error) {
+      alert('Error al guardar: ' + error.message)
+      setSaving(false)
+      return
+    }
     setSaving(false)
     setSelectedSession(null)
-    fetchAll()
+    await fetchAll()
   }
 
   // SESSION DETAIL VIEW (online - full execution)
