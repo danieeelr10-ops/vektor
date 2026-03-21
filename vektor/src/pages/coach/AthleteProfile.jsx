@@ -12,7 +12,7 @@ function toISO(y, m, d) {
 
 export default function AthleteProfile({ athlete, onBack }) {
   const { user } = useAuth()
-  const [tab, setTab] = useState('routines')
+  const [tab, setTab] = useState(athlete.mode !== 'presencial' ? 'routines' : 'calendar')
   const [sessions, setSessions] = useState([])
   const [allRoutines, setAllRoutines] = useState([])
   const [metrics, setMetrics] = useState([])
@@ -84,8 +84,9 @@ export default function AthleteProfile({ athlete, onBack }) {
     return acc
   }, {})
 
+  const isOnline = athlete.mode !== 'presencial'
   const TABS = [
-    { id: 'routines', label: 'Rutinas' },
+    ...(isOnline ? [{ id: 'routines', label: 'Rutinas' }] : []),
     { id: 'calendar', label: 'Calendario' },
     { id: 'sessions', label: 'Sesiones' },
     { id: 'metrics', label: 'Métricas' },
@@ -107,7 +108,12 @@ export default function AthleteProfile({ athlete, onBack }) {
         </div>
         <div>
           <div style={{ fontWeight: 700, fontSize: '16px' }}>{athlete.name}</div>
-          <div style={{ fontSize: '12px', color: '#aaa' }}>{athlete.sport} · {athlete.email}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+            <span style={{ fontSize: '12px', color: '#aaa' }}>{athlete.sport} · {athlete.email}</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', background: athlete.mode === 'presencial' ? 'rgba(167,139,250,0.15)' : 'rgba(96,165,250,0.15)', color: athlete.mode === 'presencial' ? '#a78bfa' : '#60a5fa' }}>
+              {athlete.mode === 'presencial' ? 'Presencial' : 'Online'}
+            </span>
+          </div>
         </div>
       </div>
 

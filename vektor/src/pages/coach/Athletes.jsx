@@ -29,7 +29,7 @@ export default function Athletes() {
   const [showModal, setShowModal] = useState(false)
   const [showPayModal, setShowPayModal] = useState(false)
   const [payAthlete, setPayAthlete] = useState(null)
-  const [form, setForm] = useState({ name: '', sport: 'Fútbol', email: '', password: '' })
+  const [form, setForm] = useState({ name: '', sport: 'Fútbol', email: '', password: '', mode: 'online' })
   const [payForm, setPayForm] = useState({ sessions_purchased: '', amount: '', note: '' })
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
@@ -56,7 +56,7 @@ export default function Athletes() {
       user_metadata: { name: form.name, sport: form.sport, role: 'athlete' }
     })
     if (authErr) { setMsg('Error: ' + authErr.message); setLoading(false); return }
-    await supabase.from('profiles').insert({ id: authData.user.id, name: form.name, sport: form.sport, role: 'athlete', email: form.email })
+    await supabase.from('profiles').insert({ id: authData.user.id, name: form.name, sport: form.sport, role: 'athlete', email: form.email, mode: form.mode })
     setLoading(false); setShowModal(false)
     setForm({ name: '', sport: 'Fútbol', email: '', password: '' })
     fetchAll()
@@ -115,7 +115,12 @@ export default function Athletes() {
                 <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', background: activity.dot, border: '2px solid #111' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px' }}>{a.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '14px' }}>{a.name}</div>
+                  <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', padding: '2px 6px', borderRadius: '4px', background: a.mode === 'presencial' ? 'rgba(167,139,250,0.15)' : 'rgba(96,165,250,0.15)', color: a.mode === 'presencial' ? '#a78bfa' : '#60a5fa' }}>
+                    {a.mode === 'presencial' ? 'Presencial' : 'Online'}
+                  </span>
+                </div>
                 <div style={{ fontSize: '12px', color: '#888' }}>
                   {a.sport} · {total} sesiones · {done} completadas
                   {lastSession ? ` · última: ${lastSession.date}` : ''}
@@ -158,6 +163,12 @@ export default function Athletes() {
             <div className="field"><label>Deporte</label>
               <select value={form.sport} onChange={e => setForm({ ...form, sport: e.target.value })}>
                 {sports.map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="field"><label>Modo de entrenamiento</label>
+              <select value={form.mode} onChange={e => setForm({ ...form, mode: e.target.value })}>
+                <option value="online">🌐 Online / A distancia</option>
+                <option value="presencial">🏋️ Presencial</option>
               </select>
             </div>
             <div className="field"><label>Correo (para login)</label><input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="atleta@correo.com" /></div>
