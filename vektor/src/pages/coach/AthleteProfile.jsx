@@ -34,6 +34,8 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [showPayModal, setShowPayModal] = useState(false)
   const [payForm, setPayForm] = useState({ sessions_purchased: '', amount: '', note: '', date: new Date().toISOString().split('T')[0] })
   const [payLoading, setPayLoading] = useState(false)
+  const [editingPayment, setEditingPayment] = useState(null)
+  const [editPayForm, setEditPayForm] = useState({ sessions_purchased: '', sessions_used: '', amount: '', note: '', date: '' })
   const today = new Date().toISOString().split('T')[0]
   const year = monthDate.getFullYear()
   const month = monthDate.getMonth()
@@ -95,6 +97,34 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
       setPresencialForm({ note: existing?.notes || '', completed: existing?.completed || false })
       setShowPresencial(true)
     }
+  }
+
+  async function startEditPayment(p) {
+    setEditingPayment(p)
+    setEditPayForm({ sessions_purchased: p.sessions_purchased, sessions_used: p.sessions_used, amount: p.amount || '', note: p.note || '', date: p.date })
+    setShowPayModal(true)
+  }
+
+  async function updatePayment() {
+    if (!editingPayment) return
+    setPayLoading(true)
+    await supabase.from('payments').update({
+      sessions_purchased: parseInt(editPayForm.sessions_purchased),
+      sessions_used: parseInt(editPayForm.sessions_used) || 0,
+      amount: editPayForm.amount ? parseFloat(editPayForm.amount) : null,
+      note: editPayForm.note,
+      date: editPayForm.date
+    }).eq('id', editingPayment.id)
+    setPayLoading(false)
+    setShowPayModal(false)
+    setEditingPayment(null)
+    fetchAll()
+  }
+
+  async function deletePayment(id) {
+    if (!confirm('¿Eliminar este pago?')) return
+    await supabase.from('payments').delete().eq('id', id)
+    fetchAll()
   }
 
   async function savePayment() {
@@ -523,9 +553,13 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#f0f0f0' }}>{p.sessions_purchased} sesiones{p.amount ? ` · $${parseFloat(p.amount).toLocaleString()}` : ''}</div>
                     <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{p.date}{p.note ? ` · ${p.note}` : ''}</div>
                   </div>
-                  <span style={{ background: isActive ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.06)', color: isActive ? '#4ade80' : '#888', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>
-                    {isActive ? 'Activo' : 'Completado'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ background: isActive ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.06)', color: isActive ? '#4ade80' : '#888', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>
+                      {isActive ? 'Activo' : 'Completado'}
+                    </span>
+                    <button className="btn sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => startEditPayment(p)}>✏️</button>
+                    <button className="btn danger sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => deletePayment(p.id)}>×</button>
+                  </div>
                 </div>
                 <div style={{ fontSize: '10px', color: '#555' }}>{p.sessions_used}/{p.sessions_purchased} sesiones usadas</div>
               </div>
@@ -550,26 +584,31 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
             </div>
           )}
 
-          {/* Pay modal */}
+          {/* Pay modal - create or edit */}
           {showPayModal && (
-            <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowPayModal(false)}>
+            <div className="modal-overlay" onClick={e => e.target===e.currentTarget && (setShowPayModal(false), setEditingPayment(null))}>
               <div className="modal">
-                <h3>Registrar pago — {athleteData.name}</h3>
+                <h3>{editingPayment ? 'Editar pago' : `Registrar pago — ${athleteData.name}`}</h3>
                 <div className="field"><label>Fecha del pago</label>
-                  <input type="date" value={payForm.date} onChange={e => setPayForm({...payForm, date: e.target.value})} />
+                  <input type="date" value={editingPayment ? editPayForm.date : payForm.date} onChange={e => editingPayment ? setEditPayForm({...editPayForm, date: e.target.value}) : setPayForm({...payForm, date: e.target.value})} />
                 </div>
                 <div className="field"><label>Sesiones compradas</label>
-                  <input type="number" value={payForm.sessions_purchased} onChange={e => setPayForm({...payForm, sessions_purchased: e.target.value})} placeholder="8" />
+                  <input type="number" value={editingPayment ? editPayForm.sessions_purchased : payForm.sessions_purchased} onChange={e => editingPayment ? setEditPayForm({...editPayForm, sessions_purchased: e.target.value}) : setPayForm({...payForm, sessions_purchased: e.target.value})} placeholder="8" />
                 </div>
+                {editingPayment && (
+                  <div className="field"><label>Sesiones usadas</label>
+                    <input type="number" value={editPayForm.sessions_used} onChange={e => setEditPayForm({...editPayForm, sessions_used: e.target.value})} placeholder="0" />
+                  </div>
+                )}
                 <div className="field"><label>Monto recibido</label>
-                  <input type="number" value={payForm.amount} onChange={e => setPayForm({...payForm, amount: e.target.value})} placeholder="150000" />
+                  <input type="number" value={editingPayment ? editPayForm.amount : payForm.amount} onChange={e => editingPayment ? setEditPayForm({...editPayForm, amount: e.target.value}) : setPayForm({...payForm, amount: e.target.value})} placeholder="150000" />
                 </div>
                 <div className="field"><label>Método / nota</label>
-                  <input value={payForm.note} onChange={e => setPayForm({...payForm, note: e.target.value})} placeholder="Transferencia, efectivo, Nequi..." />
+                  <input value={editingPayment ? editPayForm.note : payForm.note} onChange={e => editingPayment ? setEditPayForm({...editPayForm, note: e.target.value}) : setPayForm({...payForm, note: e.target.value})} placeholder="Transferencia, efectivo, Nequi..." />
                 </div>
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                  <button className="btn" onClick={() => setShowPayModal(false)}>Cancelar</button>
-                  <button className="btn primary" onClick={savePayment} disabled={payLoading}>{payLoading ? 'Guardando...' : 'Registrar pago'}</button>
+                  <button className="btn" onClick={() => { setShowPayModal(false); setEditingPayment(null) }}>Cancelar</button>
+                  <button className="btn primary" onClick={editingPayment ? updatePayment : savePayment} disabled={payLoading}>{payLoading ? 'Guardando...' : editingPayment ? 'Guardar cambios' : 'Registrar pago'}</button>
                 </div>
               </div>
             </div>
