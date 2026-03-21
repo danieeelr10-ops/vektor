@@ -30,6 +30,9 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [editForm, setEditForm] = useState({ name: athlete.name, sport: athlete.sport, mode: athlete.mode || 'online' })
   const [editSaving, setEditSaving] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showPayModal, setShowPayModal] = useState(false)
+  const [payForm, setPayForm] = useState({ sessions_purchased: '', amount: '', note: '', date: new Date().toISOString().split('T')[0] })
+  const [payLoading, setPayLoading] = useState(false)
   const today = new Date().toISOString().split('T')[0]
   const year = monthDate.getFullYear()
   const month = monthDate.getMonth()
@@ -44,6 +47,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     { id:'metrics', label:'Métricas' },
     { id:'rm', label:'RM' },
     { id:'dashboard', label:'Dashboard' },
+    { id:'pagos', label:'Pagos' },
   ]
 
   useEffect(() => { fetchAll() }, [athlete.id])
@@ -89,6 +93,23 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
       setPresencialForm({ note: existing?.notes || '', completed: existing?.completed || false })
       setShowPresencial(true)
     }
+  }
+
+  async function savePayment() {
+    if (!payForm.sessions_purchased) return
+    setPayLoading(true)
+    await supabase.from('payments').insert({
+      athlete_id: athlete.id,
+      sessions_purchased: parseInt(payForm.sessions_purchased),
+      sessions_used: 0,
+      amount: payForm.amount ? parseFloat(payForm.amount) : null,
+      date: payForm.date,
+      note: payForm.note
+    })
+    setPayLoading(false)
+    setShowPayModal(false)
+    setPayForm({ sessions_purchased: '', amount: '', note: '', date: new Date().toISOString().split('T')[0] })
+    fetchAll()
   }
 
   async function assignSession() {
@@ -350,6 +371,101 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* PAGOS TAB */}
+      {tab === 'pagos' && (
+        <div>
+          {/* Active package */}
+          {lastPayment && (
+            <div style={{ background: '#111', border: '1px solid rgba(74,222,128,0.2)', borderRadius: '12px', padding: '14px 16px', marginBottom: '14px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '10px' }}>Paquete activo</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#f0f0f0' }}>{lastPayment.sessions_purchased} sesiones{lastPayment.amount ? ` · $${lastPayment.amount.toLocaleString()}` : ''}</div>
+                  <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>Desde {lastPayment.date}{lastPayment.note ? ` · ${lastPayment.note}` : ''}</div>
+                </div>
+                <span style={{ background: sessionsRemaining <= 2 ? 'rgba(248,113,113,0.12)' : 'rgba(74,222,128,0.12)', color: sessionsRemaining <= 2 ? '#f87171' : '#4ade80', padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>{sessionsRemaining} restantes</span>
+              </div>
+              <div style={{ display: 'flex', gap: '3px', marginBottom: '6px' }}>
+                {Array.from({ length: lastPayment.sessions_purchased }).map((_, i) => (
+                  <div key={i} style={{ flex: 1, height: '6px', borderRadius: '3px', background: i < lastPayment.sessions_used ? 'rgba(255,255,255,0.08)' : sessionsRemaining <= 2 ? '#f87171' : '#4ade80' }} />
+                ))}
+              </div>
+              <div style={{ fontSize: '10px', color: '#555' }}>{lastPayment.sessions_used} de {lastPayment.sessions_purchased} sesiones usadas</div>
+            </div>
+          )}
+
+          {/* History header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em' }}>Historial de pagos</div>
+            <button className="btn primary sm" onClick={() => setShowPayModal(true)}>+ Pago</button>
+          </div>
+
+          {payments.length === 0 && <div className="empty">Sin pagos registrados aún.</div>}
+
+          {payments.map((p, idx) => {
+            const isActive = idx === 0
+            const remaining = p.sessions_purchased - p.sessions_used
+            return (
+              <div key={p.id} style={{ background: '#111', border: `1px solid ${isActive ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '12px', padding: '12px 14px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#f0f0f0' }}>{p.sessions_purchased} sesiones{p.amount ? ` · $${parseFloat(p.amount).toLocaleString()}` : ''}</div>
+                    <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{p.date}{p.note ? ` · ${p.note}` : ''}</div>
+                  </div>
+                  <span style={{ background: isActive ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.06)', color: isActive ? '#4ade80' : '#888', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>
+                    {isActive ? 'Activo' : 'Completado'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '10px', color: '#555' }}>{p.sessions_used}/{p.sessions_purchased} sesiones usadas</div>
+              </div>
+            )
+          })}
+
+          {/* Totals */}
+          {payments.length > 0 && (
+            <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '12px 14px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#888' }}>Total recaudado</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#4ade80', fontFamily: 'monospace' }}>
+                  ${payments.reduce((a, p) => a + (parseFloat(p.amount) || 0), 0).toLocaleString()}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '12px', color: '#888' }}>Sesiones totales</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#f0f0f0', fontFamily: 'monospace' }}>
+                  {payments.reduce((a, p) => a + (p.sessions_purchased || 0), 0)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Pay modal */}
+          {showPayModal && (
+            <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowPayModal(false)}>
+              <div className="modal">
+                <h3>Registrar pago — {athleteData.name}</h3>
+                <div className="field"><label>Fecha del pago</label>
+                  <input type="date" value={payForm.date} onChange={e => setPayForm({...payForm, date: e.target.value})} />
+                </div>
+                <div className="field"><label>Sesiones compradas</label>
+                  <input type="number" value={payForm.sessions_purchased} onChange={e => setPayForm({...payForm, sessions_purchased: e.target.value})} placeholder="8" />
+                </div>
+                <div className="field"><label>Monto recibido</label>
+                  <input type="number" value={payForm.amount} onChange={e => setPayForm({...payForm, amount: e.target.value})} placeholder="150000" />
+                </div>
+                <div className="field"><label>Método / nota</label>
+                  <input value={payForm.note} onChange={e => setPayForm({...payForm, note: e.target.value})} placeholder="Transferencia, efectivo, Nequi..." />
+                </div>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button className="btn" onClick={() => setShowPayModal(false)}>Cancelar</button>
+                  <button className="btn primary" onClick={savePayment} disabled={payLoading}>{payLoading ? 'Guardando...' : 'Registrar pago'}</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
