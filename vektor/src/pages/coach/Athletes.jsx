@@ -2,6 +2,16 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import AthleteProfile from './AthleteProfile'
 
+function getStatus(sessions, athleteId) {
+  const athleteSessions = sessions.filter(s => s.athlete_id === athleteId)
+  if (!athleteSessions.length) return { label: 'Sin sesiones', color: '#555', bg: 'rgba(255,255,255,0.06)' }
+  const last = athleteSessions[0]
+  const days = Math.floor((new Date() - new Date(last.date)) / (1000 * 60 * 60 * 24))
+  if (days <= 14) return { label: 'Activo', color: '#4ade80', bg: 'rgba(74,222,128,0.12)', dot: '#4ade80' }
+  if (days <= 30) return { label: 'Reciente', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', dot: '#fbbf24' }
+  return { label: 'Inactivo', color: '#888', bg: 'rgba(255,255,255,0.06)', dot: '#555' }
+}
+
 export default function Athletes() {
   const [athletes, setAthletes] = useState([])
   const [sessions, setSessions] = useState([])
@@ -10,6 +20,7 @@ export default function Athletes() {
   const [form, setForm] = useState({ name: '', sport: 'Fútbol', email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
+  const sports = ['Fútbol', 'Atletismo', 'Natación', 'Baloncesto', 'Ciclismo', 'Tenis', 'Gym', 'Otro']
 
   useEffect(() => { fetchAll() }, [])
 
@@ -36,8 +47,9 @@ export default function Athletes() {
     fetchAll()
   }
 
-  const initials = name => name.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2)
-  const sports = ['Fútbol', 'Atletismo', 'Natación', 'Baloncesto', 'Ciclismo', 'Tenis', 'Gym', 'Otro']
+  function initials(name) {
+    return name.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2)
+  }
 
   if (selected) {
     return <AthleteProfile athlete={selected} onBack={() => { setSelected(null); fetchAll() }} />
@@ -55,38 +67,34 @@ export default function Athletes() {
       {athletes.map(a => {
         const total = sessions.filter(s => s.athlete_id === a.id).length
         const done = sessions.filter(s => s.athlete_id === a.id && s.completed).length
+        const lastSession = sessions.filter(s => s.athlete_id === a.id)[0]
+        const status = getStatus(sessions, a.id)
         return (
-          {(() => {
-            const lastSession = sessions.filter(s => s.athlete_id === a.id)[0]
-            const lastDate = lastSession?.date
-            const daysSince = lastDate ? Math.floor((new Date() - new Date(lastDate)) / (1000*60*60*24)) : null
-            const isActive = daysSince !== null && daysSince <= 14
-            const isRecent = daysSince !== null && daysSince <= 30
-            const dotColor = isActive ? '#4ade80' : isRecent ? '#fbbf24' : '#555'
-            const statusLabel = isActive ? 'Activo' : isRecent ? 'Reciente' : total > 0 ? 'Inactivo' : 'Sin sesiones'
-            return (
-              <div key={a.id} onClick={() => setSelected(a)}
-                style={{ background: '#111', border: `1px solid ${isActive ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', transition: 'border-color .15s' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(74,222,128,0.3)'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = isActive ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.07)'}
-              >
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#4ade80' }}>
-                    {initials(a.name)}
-                  </div>
-                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', background: dotColor, border: '2px solid #111' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '14px' }}>{a.name}</div>
-                  <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>{a.sport} · {total} sesiones · {done} completadas{lastDate ? ` · última: ${lastDate}` : ''}</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ background: dotColor === '#4ade80' ? 'rgba(74,222,128,0.12)' : dotColor === '#fbbf24' ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.06)', color: dotColor, padding: '3px 10px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>{statusLabel}</span>
-                  <span style={{ color: '#555', fontSize: '18px' }}>›</span>
-                </div>
+          <div
+            key={a.id}
+            onClick={() => setSelected(a)}
+            style={{ background: '#111', border: `1px solid ${status.dot === '#4ade80' ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', transition: 'border-color .15s' }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(74,222,128,0.3)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = status.dot === '#4ade80' ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.07)'}
+          >
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#4ade80' }}>
+                {initials(a.name)}
               </div>
-            )
-          })()}
+              <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', background: status.dot || '#555', border: '2px solid #111' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px' }}>{a.name}</div>
+              <div style={{ fontSize: '12px', color: '#888' }}>
+                {a.sport} · {total} sesiones · {done} completadas
+                {lastSession ? ` · última: ${lastSession.date}` : ''}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+              <span style={{ background: status.bg, color: status.color, padding: '3px 10px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>{status.label}</span>
+              <span style={{ color: '#555', fontSize: '18px' }}>›</span>
+            </div>
+          </div>
         )
       })}
 
