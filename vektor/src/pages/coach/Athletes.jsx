@@ -2,22 +2,35 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import AthleteProfile from './AthleteProfile'
 
-function getStatus(sessions, athleteId) {
-  const athleteSessions = sessions.filter(s => s.athlete_id === athleteId)
-  if (!athleteSessions.length) return { label: 'Sin sesiones', color: '#555', bg: 'rgba(255,255,255,0.06)' }
-  const last = athleteSessions[0]
-  const days = Math.floor((new Date() - new Date(last.date)) / (1000 * 60 * 60 * 24))
-  if (days <= 14) return { label: 'Activo', color: '#4ade80', bg: 'rgba(74,222,128,0.12)', dot: '#4ade80' }
-  if (days <= 30) return { label: 'Reciente', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', dot: '#fbbf24' }
-  return { label: 'Inactivo', color: '#888', bg: 'rgba(255,255,255,0.06)', dot: '#555' }
+function getActivityStatus(sessions, athleteId) {
+  const s = sessions.filter(x => x.athlete_id === athleteId)
+  if (!s.length) return { label: 'Sin sesiones', dot: '#555' }
+  const days = Math.floor((new Date() - new Date(s[0].date)) / (1000 * 60 * 60 * 24))
+  if (days <= 14) return { label: 'Activo', dot: '#4ade80' }
+  if (days <= 30) return { label: 'Reciente', dot: '#fbbf24' }
+  return { label: 'Inactivo', dot: '#555' }
+}
+
+function getPaymentStatus(payments, athleteId) {
+  const p = payments.filter(x => x.athlete_id === athleteId)
+  if (!p.length) return { label: 'Sin paquete', color: '#555', bg: 'rgba(255,255,255,0.06)', remaining: 0, total: 0 }
+  const last = p[0]
+  const remaining = (last.sessions_purchased || 0) - (last.sessions_used || 0)
+  if (remaining <= 0) return { label: 'Sesiones agotadas', color: '#f87171', bg: 'rgba(248,113,113,0.12)', remaining: 0, total: last.sessions_purchased }
+  if (remaining <= 2) return { label: `${remaining} ses. restantes`, color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', remaining, total: last.sessions_purchased }
+  return { label: `${remaining}/${last.sessions_purchased} sesiones`, color: '#4ade80', bg: 'rgba(74,222,128,0.12)', remaining, total: last.sessions_purchased }
 }
 
 export default function Athletes() {
   const [athletes, setAthletes] = useState([])
   const [sessions, setSessions] = useState([])
+  const [payments, setPayments] = useState([])
   const [selected, setSelected] = useState(null)
   const [showModal, setShowModal] = useState(false)
+  const [showPayModal, setShowPayModal] = useState(false)
+  const [payAthlete, setPayAthlete] = useState(null)
   const [form, setForm] = useState({ name: '', sport: 'Fútbol', email: '', password: '' })
+  const [payForm, setPayForm] = useState({ sessions_purchased: '', amount: '', note: '' })
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const sports = ['Fútbol', 'Atletismo', 'Natación', 'Baloncesto', 'Ciclismo', 'Tenis', 'Gym', 'Otro']
@@ -25,12 +38,14 @@ export default function Athletes() {
   useEffect(() => { fetchAll() }, [])
 
   async function fetchAll() {
-    const [{ data: a }, { data: s }] = await Promise.all([
+    const [{ data: a }, { data: s }, { data: p }] = await Promise.all([
       supabase.from('profiles').select('*').eq('role', 'athlete').order('name'),
-      supabase.from('sessions').select('id,athlete_id,completed,date').order('date', { ascending: false })
+      supabase.from('sessions').select('id,athlete_id,completed,date').order('date', { ascending: false }),
+      supabase.from('payments').select('*').order('date', { ascending: false })
     ])
     setAthletes(a || [])
     setSessions(s || [])
+    setPayments(p || [])
   }
 
   async function createAthlete() {
@@ -44,6 +59,22 @@ export default function Athletes() {
     await supabase.from('profiles').insert({ id: authData.user.id, name: form.name, sport: form.sport, role: 'athlete', email: form.email })
     setLoading(false); setShowModal(false)
     setForm({ name: '', sport: 'Fútbol', email: '', password: '' })
+    fetchAll()
+  }
+
+  async function savePayment() {
+    if (!payForm.sessions_purchased || !payAthlete) return
+    setLoading(true)
+    await supabase.from('payments').insert({
+      athlete_id: payAthlete.id,
+      sessions_purchased: parseInt(payForm.sessions_purchased),
+      sessions_used: 0,
+      amount: payForm.amount ? parseFloat(payForm.amount) : null,
+      date: new Date().toISOString().split('T')[0],
+      note: payForm.note
+    })
+    setLoading(false); setShowPayModal(false)
+    setPayForm({ sessions_purchased: '', amount: '', note: '' })
     fetchAll()
   }
 
@@ -68,36 +99,57 @@ export default function Athletes() {
         const total = sessions.filter(s => s.athlete_id === a.id).length
         const done = sessions.filter(s => s.athlete_id === a.id && s.completed).length
         const lastSession = sessions.filter(s => s.athlete_id === a.id)[0]
-        const status = getStatus(sessions, a.id)
+        const activity = getActivityStatus(sessions, a.id)
+        const payment = getPaymentStatus(payments, a.id)
+
         return (
-          <div
-            key={a.id}
-            onClick={() => setSelected(a)}
-            style={{ background: '#111', border: `1px solid ${status.dot === '#4ade80' ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', transition: 'border-color .15s' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(74,222,128,0.3)'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = status.dot === '#4ade80' ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.07)'}
-          >
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#4ade80' }}>
-                {initials(a.name)}
+          <div key={a.id} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px' }}>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+              onClick={() => setSelected(a)}
+            >
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#4ade80' }}>
+                  {initials(a.name)}
+                </div>
+                <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', background: activity.dot, border: '2px solid #111' }} />
               </div>
-              <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', background: status.dot || '#555', border: '2px solid #111' }} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px' }}>{a.name}</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>
-                {a.sport} · {total} sesiones · {done} completadas
-                {lastSession ? ` · última: ${lastSession.date}` : ''}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px' }}>{a.name}</div>
+                <div style={{ fontSize: '12px', color: '#888' }}>
+                  {a.sport} · {total} sesiones · {done} completadas
+                  {lastSession ? ` · última: ${lastSession.date}` : ''}
+                </div>
               </div>
+              <span style={{ color: '#555', fontSize: '18px', flexShrink: 0 }}>›</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-              <span style={{ background: status.bg, color: status.color, padding: '3px 10px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>{status.label}</span>
-              <span style={{ color: '#555', fontSize: '18px' }}>›</span>
+
+            {/* Payment row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '11px', color: '#555' }}>Paquete:</span>
+                <span style={{ background: payment.bg, color: payment.color, padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>{payment.label}</span>
+                {payment.total > 0 && (
+                  <div style={{ display: 'flex', gap: '2px' }}>
+                    {Array.from({ length: payment.total }).map((_, i) => (
+                      <div key={i} style={{ width: '8px', height: '8px', borderRadius: '2px', background: i < payment.remaining ? payment.color : 'rgba(255,255,255,0.08)' }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                className="btn sm"
+                onClick={e => { e.stopPropagation(); setPayAthlete(a); setShowPayModal(true) }}
+                style={{ fontSize: '11px', padding: '4px 10px' }}
+              >
+                + Pago
+              </button>
             </div>
           </div>
         )
       })}
 
+      {/* New athlete modal */}
       {showModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal">
@@ -114,6 +166,31 @@ export default function Athletes() {
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button className="btn" onClick={() => setShowModal(false)}>Cancelar</button>
               <button className="btn primary" onClick={createAthlete} disabled={loading}>{loading ? 'Creando...' : 'Crear atleta'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment modal */}
+      {showPayModal && payAthlete && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowPayModal(false)}>
+          <div className="modal">
+            <h3>Registrar pago — {payAthlete.name}</h3>
+            <div className="field">
+              <label>Sesiones compradas</label>
+              <input type="number" value={payForm.sessions_purchased} onChange={e => setPayForm({ ...payForm, sessions_purchased: e.target.value })} placeholder="8" />
+            </div>
+            <div className="field">
+              <label>Monto recibido (opcional)</label>
+              <input type="number" step="0.01" value={payForm.amount} onChange={e => setPayForm({ ...payForm, amount: e.target.value })} placeholder="150000" />
+            </div>
+            <div className="field">
+              <label>Nota (opcional)</label>
+              <input value={payForm.note} onChange={e => setPayForm({ ...payForm, note: e.target.value })} placeholder="Transferencia, efectivo..." />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => setShowPayModal(false)}>Cancelar</button>
+              <button className="btn primary" onClick={savePayment} disabled={loading}>{loading ? 'Guardando...' : 'Registrar pago'}</button>
             </div>
           </div>
         </div>
