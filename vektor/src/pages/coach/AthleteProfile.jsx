@@ -23,6 +23,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [monthDate, setMonthDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(null)
   const [showAssign, setShowAssign] = useState(false)
+  const [showDayDetail, setShowDayDetail] = useState(null)
   const [showPresencial, setShowPresencial] = useState(false)
   const [assignForm, setAssignForm] = useState({ routine_id: '', notes: '' })
   const [presencialForm, setPresencialForm] = useState({ note: '', completed: false })
@@ -44,6 +45,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const TABS = [
     ...(isOnline ? [{ id:'routines', label:'Rutinas' }] : []),
     { id:'calendar', label:'Calendario' },
+    { id:'sesiones', label:'Sesiones' },
     { id:'metrics', label:'Métricas' },
     { id:'rm', label:'RM' },
     { id:'dashboard', label:'Dashboard' },
@@ -280,24 +282,28 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
               const ss = dateStr ? sessionsByDate(dateStr) : []
               const hasCompleted = ss.some(s => s.completed)
               const hasPending = ss.some(s => !s.completed)
-              const hasNote = ss.some(s => s.notes)
               return (
-                <div key={i} onClick={() => valid && openDay(dateStr)}
+                <div key={i} onClick={() => valid && ss.length && setShowDayDetail({ date: dateStr, sessions: ss })}
                   style={{
-                    background: !valid ? 'transparent' : isToday ? 'rgba(74,222,128,0.08)' : '#111',
-                    border: `1px solid ${!valid ? 'transparent' : isToday ? 'rgba(74,222,128,0.4)' : ss.length ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`,
-                    borderRadius: '8px', padding: '5px 3px', minHeight: '50px',
-                    cursor: valid ? 'pointer' : 'default'
+                    background: !valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.08)' : isToday ? 'rgba(74,222,128,0.04)' : '#111',
+                    border: `1px solid ${!valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.35)' : hasPending ? 'rgba(251,191,36,0.25)' : isToday ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`,
+                    borderRadius: '8px', padding: '5px 3px', minHeight: '52px',
+                    cursor: valid && ss.length ? 'pointer' : 'default',
+                    position: 'relative'
                   }}>
                   {valid && (
                     <>
-                      <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: isToday ? 700 : 400, color: isToday ? '#4ade80' : '#f0f0f0' }}>{dayNum}</div>
-                      <div style={{ display: 'flex', gap: '2px', justifyContent: 'center', marginTop: '4px', flexWrap: 'wrap' }}>
-                        {hasCompleted && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80' }} />}
-                        {hasPending && !isOnline && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fbbf24' }} />}
-                        {!isOnline && hasNote && !hasCompleted && <div style={{ width: '14px', height: '4px', borderRadius: '2px', background: '#a78bfa' }} />}
-                        {isOnline && hasPending && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fbbf24' }} />}
-                      </div>
+                      <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: isToday ? 700 : 400, color: isToday ? '#4ade80' : '#f0f0f0' }}>{dayNum}</div>
+                      {hasCompleted && (
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
+                          <div style={{ width: '18px', height: '18px', borderRadius: '5px', background: '#4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#000' }}>✓</div>
+                        </div>
+                      )}
+                      {!hasCompleted && hasPending && (
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
+                          <div style={{ width: '18px', height: '18px', borderRadius: '5px', background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: '#fbbf24' }}>•••</div>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -312,6 +318,106 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           <div style={{ marginTop: '10px', fontSize: '11px', color: '#555', textAlign: 'center' }}>
             {isOnline ? 'Click en un día para asignar una sesión' : 'Click en un día para registrar la sesión'}
           </div>
+        </div>
+      )}
+
+      {/* SESIONES TAB */}
+      {tab === 'sesiones' && (
+        <div>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '12px' }}>
+            Sesiones completadas — {sessions.filter(s=>s.completed).length} total
+          </div>
+          {sessions.filter(s => s.completed).length === 0 && <div className="empty">Sin sesiones completadas aún.</div>}
+          {sessions.filter(s => s.completed).map(s => {
+            const exData = (() => { try { return s.routines?.exercises_data ? JSON.parse(s.routines.exercises_data) : null } catch { return null } })()
+            const execData = (() => { try { return s.execution_data ? JSON.parse(s.execution_data) : null } catch { return null } })()
+            return (
+              <div key={s.id} style={{ background: '#111', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', color: '#000', flexShrink: 0 }}>✓</div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#f0f0f0' }}>{s.routines?.name || 'Sesión'}</div>
+                      <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{s.date}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {s.rpe && <span style={{ background: '#1a1a1a', color: '#4ade80', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700 }}>RPE {s.rpe}</span>}
+                    {s.duration && <span style={{ background: '#1a1a1a', color: '#aaa', padding: '3px 8px', borderRadius: '6px', fontSize: '11px' }}>{s.duration} min</span>}
+                  </div>
+                </div>
+
+                {s.log_notes && (
+                  <div style={{ fontSize: '12px', color: '#aaa', fontStyle: 'italic', marginBottom: '10px', background: '#1a1a1a', padding: '8px 12px', borderRadius: '8px' }}>
+                    "{s.log_notes}"
+                  </div>
+                )}
+
+                {exData && exData.map((ex, exIdx) => {
+                  if (!ex.series?.length) return null
+                  return (
+                    <div key={exIdx} style={{ marginBottom: '10px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '12px', color: '#f0f0f0', marginBottom: '6px' }}>{ex.name}</div>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', fontSize: '11px' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                              <th style={{ padding: '5px 8px', textAlign: 'left', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Serie</th>
+                              <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Plan</th>
+                              <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Real</th>
+                              <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Kg plan</th>
+                              <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Kg real</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ex.series.map((serie, si) => {
+                              const rKey = `${s.id}-${exIdx}-${si}-reps`
+                              const wKey = `${s.id}-${exIdx}-${si}-weight`
+                              const realReps = execData?.[rKey]
+                              const realWeight = execData?.[wKey]
+                              const exceeded = realWeight && serie.weight && parseFloat(realWeight) > parseFloat(serie.weight)
+                              return (
+                                <tr key={si} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                  <td style={{ padding: '6px 8px', color: '#4ade80', fontWeight: 700 }}>S{si+1}</td>
+                                  <td style={{ padding: '6px 8px', textAlign: 'center', color: '#555' }}>{serie.reps || '—'}</td>
+                                  <td style={{ padding: '6px 8px', textAlign: 'center', color: realReps ? '#60a5fa' : '#333', fontWeight: 600 }}>{realReps || '—'}</td>
+                                  <td style={{ padding: '6px 8px', textAlign: 'center', color: '#555' }}>{serie.weight ? `${serie.weight}kg` : '—'}</td>
+                                  <td style={{ padding: '6px 8px', textAlign: 'center', color: exceeded ? '#4ade80' : realWeight ? '#60a5fa' : '#333', fontWeight: 600 }}>
+                                    {realWeight ? `${realWeight}kg` : '—'}
+                                    {exceeded && <span style={{ fontSize: '9px', marginLeft: '3px' }}>↑</span>}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+
+          {/* Pending sessions */}
+          {sessions.filter(s => !s.completed).length > 0 && (
+            <>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', margin: '16px 0 10px' }}>Sesiones pendientes</div>
+              {sessions.filter(s => !s.completed).map(s => (
+                <div key={s.id} style={{ background: '#111', border: '1px solid rgba(251,191,36,0.15)', borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '13px', color: '#f0f0f0' }}>{s.routines?.name || 'Sesión'}</div>
+                    <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{s.date}</div>
+                    {s.notes && <div style={{ fontSize: '11px', color: '#555', marginTop: '3px' }}>"{s.notes}"</div>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>Pendiente</span>
+                    <button className="btn danger sm" style={{ fontSize: '10px' }} onClick={async () => { if (!confirm('¿Eliminar?')) return; await supabase.from('sessions').delete().eq('id', s.id); fetchAll() }}>×</button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
 
@@ -472,6 +578,93 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
       {/* DASHBOARD TAB */}
       {tab === 'dashboard' && (
         <AthleteDashboard athlete={athleteData} onBack={() => setTab('metrics')} />
+      )}
+
+      {/* DAY DETAIL MODAL */}
+      {showDayDetail && (
+        <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowDayDetail(null)}>
+          <div className="modal" style={{ maxWidth: '480px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ margin: 0 }}>{showDayDetail.date}</h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn primary sm" onClick={() => { setSelectedDate(showDayDetail.date); setShowDayDetail(null); isOnline ? setShowAssign(true) : setShowPresencial(true) }}>+ Sesión</button>
+                <button className="btn sm" onClick={() => setShowDayDetail(null)}>✕</button>
+              </div>
+            </div>
+            {showDayDetail.sessions.map(s => {
+              const exData = (() => { try { return s.routines?.exercises_data ? JSON.parse(s.routines.exercises_data) : null } catch { return null } })()
+              const execData = (() => { try { return s.execution_data ? JSON.parse(s.execution_data) : null } catch { return null } })()
+              return (
+                <div key={s.id} style={{ background: s.completed ? 'rgba(74,222,128,0.06)' : '#1a1a1a', border: `1px solid ${s.completed ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '10px', padding: '12px 14px', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {s.completed
+                        ? <div style={{ width: '20px', height: '20px', borderRadius: '5px', background: '#4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#000' }}>✓</div>
+                        : <div style={{ width: '20px', height: '20px', borderRadius: '5px', border: '2px solid rgba(251,191,36,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}></div>
+                      }
+                      <span style={{ fontWeight: 700, fontSize: '14px', color: '#f0f0f0' }}>{s.routines?.name || 'Sesión'}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                      {s.rpe && <span style={{ background: '#111', color: '#4ade80', padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 700 }}>RPE {s.rpe}</span>}
+                      {s.duration && <span style={{ background: '#111', color: '#aaa', padding: '2px 7px', borderRadius: '6px', fontSize: '10px' }}>{s.duration} min</span>}
+                    </div>
+                  </div>
+                  {s.log_notes && <div style={{ fontSize: '12px', color: '#aaa', fontStyle: 'italic', background: '#111', padding: '7px 10px', borderRadius: '7px', marginBottom: '10px' }}>"{s.log_notes}"</div>}
+                  {s.notes && !s.completed && <div style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>📋 {s.notes}</div>}
+                  {exData && s.completed && exData.map((ex, exIdx) => {
+                    if (!ex.series?.length) return null
+                    return (
+                      <div key={exIdx} style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#f0f0f0', marginBottom: '5px' }}>{ex.name}</div>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', background: '#111', borderRadius: '8px', overflow: 'hidden', fontSize: '11px' }}>
+                            <thead>
+                              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                                <th style={{ padding: '5px 7px', textAlign: 'left', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>S</th>
+                                <th style={{ padding: '5px 7px', textAlign: 'center', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Plan</th>
+                                <th style={{ padding: '5px 7px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Real</th>
+                                <th style={{ padding: '5px 7px', textAlign: 'center', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Kg plan</th>
+                                <th style={{ padding: '5px 7px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Kg real</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {ex.series.map((serie, si) => {
+                                const realReps = execData?.[`${s.id}-${exIdx}-${si}-reps`]
+                                const realWeight = execData?.[`${s.id}-${exIdx}-${si}-weight`]
+                                const exceeded = realWeight && serie.weight && parseFloat(realWeight) > parseFloat(serie.weight)
+                                return (
+                                  <tr key={si} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <td style={{ padding: '5px 7px', color: '#4ade80', fontWeight: 700 }}>S{si+1}</td>
+                                    <td style={{ padding: '5px 7px', textAlign: 'center', color: '#555' }}>{serie.reps||'—'}</td>
+                                    <td style={{ padding: '5px 7px', textAlign: 'center', color: realReps ? '#60a5fa' : '#333', fontWeight: 600 }}>{realReps||'—'}</td>
+                                    <td style={{ padding: '5px 7px', textAlign: 'center', color: '#555' }}>{serie.weight ? `${serie.weight}kg` : '—'}</td>
+                                    <td style={{ padding: '5px 7px', textAlign: 'center', color: exceeded ? '#4ade80' : realWeight ? '#60a5fa' : '#333', fontWeight: 600 }}>
+                                      {realWeight ? `${realWeight}kg` : '—'}{exceeded && <span style={{ fontSize: '9px', marginLeft: '2px' }}>↑</span>}
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {exData && !s.completed && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {exData.map((ex, ei) => (
+                        <span key={ei} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', color: '#aaa' }}>{ex.name}</span>
+                      ))}
+                    </div>
+                  )}
+                  {!s.completed && (
+                    <button className="btn danger sm" style={{ marginTop: '8px', fontSize: '10px' }} onClick={async () => { if(!confirm('¿Eliminar?')) return; await supabase.from('sessions').delete().eq('id', s.id); setShowDayDetail(null); fetchAll() }}>Eliminar sesión</button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       {/* ONLINE: Assign session modal */}
