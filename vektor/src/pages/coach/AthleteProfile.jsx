@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AthleteDashboard from './AthleteDashboard'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -85,6 +86,7 @@ export default function AthleteProfile({ athlete, onBack }) {
     { id: 'sessions', label: 'Sesiones' },
     { id: 'metrics', label: 'Métricas' },
     { id: 'rm', label: 'RM' },
+    { id: 'dashboard', label: 'Dashboard' },
   ]
 
   const statStyle = { background: '#1a1a1a', borderRadius: '8px', padding: '10px', textAlign: 'center' }
@@ -341,6 +343,11 @@ export default function AthleteProfile({ athlete, onBack }) {
             )
           })}
         </div>
+      )}
+
+      {/* DASHBOARD TAB */}
+      {tab === 'dashboard' && (
+        <AthleteDashboard athlete={athlete} onBack={() => setTab('metrics')} />
       )}
 
       {/* ASSIGN MODAL */}

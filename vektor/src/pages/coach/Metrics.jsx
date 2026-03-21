@@ -8,7 +8,8 @@ export default function CoachMetrics() {
   const [tab, setTab] = useState('registro')
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
-    weight:'', body_fat:'', muscle_pct:'', water_pct:'', imc:'', body_age:'',
+    weight:'', body_fat:'', muscle_pct:'', muscle_kg:'', water_pct:'', imc:'', body_age:'',
+    fat_visceral:'', bones_kg:'', obesity_grade:'',
     arm_r:'', arm_l:'', arm_r_flex:'', arm_l_flex:'',
     leg_r:'', leg_l:'', waist:'', goal:'Ganar músculo', note:''
   })
@@ -33,7 +34,7 @@ export default function CoachMetrics() {
     if (!form.weight || !selectedAthlete) return
     setSaving(true)
     await supabase.from('metrics').insert({ ...form, user_id: selectedAthlete, date: new Date().toISOString().split('T')[0] })
-    setForm({ weight:'', body_fat:'', muscle_pct:'', water_pct:'', imc:'', body_age:'', arm_r:'', arm_l:'', arm_r_flex:'', arm_l_flex:'', leg_r:'', leg_l:'', waist:'', goal:'Ganar músculo', note:'' })
+    setForm({ weight:'', body_fat:'', muscle_pct:'', muscle_kg:'', water_pct:'', imc:'', body_age:'', fat_visceral:'', bones_kg:'', obesity_grade:'', arm_r:'', arm_l:'', arm_r_flex:'', arm_l_flex:'', leg_r:'', leg_l:'', waist:'', goal:'Ganar músculo', note:'' })
     setSaving(false)
     fetchMetrics()
     setTab('historial')
@@ -64,9 +65,14 @@ export default function CoachMetrics() {
               <div className="field"><label>Grasa (%)</label><input type="number" step="0.1" value={form.body_fat} onChange={e=>setForm({...form,body_fat:e.target.value})} placeholder="18" /></div>
               <div className="field"><label>Músculo (%)</label><input type="number" step="0.1" value={form.muscle_pct} onChange={e=>setForm({...form,muscle_pct:e.target.value})} placeholder="42" /></div>
             </div>
-            <div className="g3">
+            <div className="g3" style={{ marginBottom:'8px' }}>
+              <div className="field"><label>Músculo (kg)</label><input type="number" step="0.1" value={form.muscle_kg} onChange={e=>setForm({...form,muscle_kg:e.target.value})} placeholder="38" /></div>
               <div className="field"><label>Agua (%)</label><input type="number" step="0.1" value={form.water_pct} onChange={e=>setForm({...form,water_pct:e.target.value})} placeholder="55" /></div>
               <div className="field"><label>IMC</label><input type="number" step="0.1" value={form.imc} onChange={e=>setForm({...form,imc:e.target.value})} placeholder="22" /></div>
+            </div>
+            <div className="g3">
+              <div className="field"><label>Grasa visc.</label><input type="number" step="0.1" value={form.fat_visceral} onChange={e=>setForm({...form,fat_visceral:e.target.value})} placeholder="2" /></div>
+              <div className="field"><label>Huesos (kg)</label><input type="number" step="0.1" value={form.bones_kg} onChange={e=>setForm({...form,bones_kg:e.target.value})} placeholder="3.2" /></div>
               <div className="field"><label>Edad corp.</label><input type="number" value={form.body_age} onChange={e=>setForm({...form,body_age:e.target.value})} placeholder="24" /></div>
             </div>
           </div>
