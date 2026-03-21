@@ -49,12 +49,13 @@ export default function AthleteProfile({ athlete, onBack }) {
     return sessions.filter(s => s.date === dateStr)
   }
 
+  const [athleteData, setAthleteData] = useState({ ...athlete })
+
   async function saveEdit() {
     setEditSaving(true)
-    await supabase.from('profiles').update({ name: editForm.name, sport: editForm.sport, mode: editForm.mode }).eq('id', athlete.id)
-    athlete.name = editForm.name
-    athlete.sport = editForm.sport
-    athlete.mode = editForm.mode
+    const { error } = await supabase.from('profiles').update({ name: editForm.name, sport: editForm.sport, mode: editForm.mode }).eq('id', athlete.id)
+    if (error) { alert('Error: ' + error.message); setEditSaving(false); return }
+    setAthleteData(prev => ({ ...prev, name: editForm.name, sport: editForm.sport, mode: editForm.mode }))
     setEditSaving(false)
     setShowEdit(false)
   }
@@ -97,7 +98,7 @@ export default function AthleteProfile({ athlete, onBack }) {
     return acc
   }, {})
 
-  const isOnline = athlete.mode !== 'presencial'
+  const isOnline = athleteData.mode !== 'presencial'
   const TABS = [
     ...(isOnline ? [{ id: 'routines', label: 'Rutinas' }] : []),
     { id: 'calendar', label: 'Calendario' },
@@ -118,14 +119,14 @@ export default function AthleteProfile({ athlete, onBack }) {
         <button className="btn sm" onClick={onBack}>← Volver</button>
         <button className="btn sm" onClick={() => setShowEdit(true)} style={{ marginLeft: 'auto' }}>✏️ Editar</button>
         <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#4ade80', fontSize: '14px' }}>
-          {athlete.name.split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2)}
+          {athleteData.name.split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2)}
         </div>
         <div>
-          <div style={{ fontWeight: 700, fontSize: '16px' }}>{athlete.name}</div>
+          <div style={{ fontWeight: 700, fontSize: '16px' }}>{athleteData.name}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-            <span style={{ fontSize: '12px', color: '#aaa' }}>{athlete.sport} · {athlete.email}</span>
-            <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', background: athlete.mode === 'presencial' ? 'rgba(167,139,250,0.15)' : 'rgba(96,165,250,0.15)', color: athlete.mode === 'presencial' ? '#a78bfa' : '#60a5fa' }}>
-              {athlete.mode === 'presencial' ? 'Presencial' : 'Online'}
+            <span style={{ fontSize: '12px', color: '#aaa' }}>{athleteData.sport} · {athleteData.email}</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', background: athleteData.mode === 'presencial' ? 'rgba(167,139,250,0.15)' : 'rgba(96,165,250,0.15)', color: athleteData.mode === 'presencial' ? '#a78bfa' : '#60a5fa' }}>
+              {athleteData.mode === 'presencial' ? 'Presencial' : 'Online'}
             </span>
           </div>
         </div>
@@ -178,7 +179,7 @@ export default function AthleteProfile({ athlete, onBack }) {
                 ))}
                 <button className="btn primary sm" style={{ width: '100%', marginTop: '8px' }}
                   onClick={() => { setAssignForm(f => ({ ...f, routine_id: r.id })); setSelectedDate(today); setShowAssign(true) }}>
-                  Asignar a {athlete.name.split(' ')[0]}
+                  Asignar a {athleteData.name.split(' ')[0]}
                 </button>
               </div>
             )
