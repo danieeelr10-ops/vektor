@@ -26,17 +26,20 @@ export default function CoachMetrics() {
   }
 
   async function fetchMetrics() {
-    const { data } = await supabase.from('metrics').select('*').eq('user_id', selectedAthlete).order('date', { ascending: false })
+    if (!selectedAthlete) return
+    const { data, error } = await supabase.from('metrics').select('*').eq('user_id', selectedAthlete).order('date', { ascending: false })
+    if (error) console.error('fetchMetrics error:', error)
     setMetrics(data || [])
   }
 
   async function save() {
-    if (!form.weight || !selectedAthlete) return
+    if (!form.weight || !selectedAthlete) { alert('Selecciona un atleta y agrega el peso'); return }
     setSaving(true)
-    await supabase.from('metrics').insert({ ...form, user_id: selectedAthlete, date: new Date().toISOString().split('T')[0] })
+    const { error } = await supabase.from('metrics').insert({ ...form, user_id: selectedAthlete, date: new Date().toISOString().split('T')[0] })
+    if (error) { alert('Error al guardar: ' + error.message); setSaving(false); return }
     setForm({ weight:'', body_fat:'', muscle_pct:'', muscle_kg:'', water_pct:'', imc:'', body_age:'', fat_visceral:'', bones_kg:'', obesity_grade:'', arm_r:'', arm_l:'', arm_r_flex:'', arm_l_flex:'', leg_r:'', leg_l:'', waist:'', goal:'Ganar músculo', note:'' })
     setSaving(false)
-    fetchMetrics()
+    await fetchMetrics()
     setTab('historial')
   }
 
