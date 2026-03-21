@@ -21,6 +21,9 @@ export default function AthleteProfile({ athlete, onBack }) {
   const [monthDate, setMonthDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(null)
   const [showAssign, setShowAssign] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [editForm, setEditForm] = useState({ name: athlete.name, sport: athlete.sport, mode: athlete.mode || 'online' })
+  const [editSaving, setEditSaving] = useState(false)
   const [assignForm, setAssignForm] = useState({ routine_id: '', notes: '' })
   const [saving, setSaving] = useState(false)
 
@@ -44,6 +47,16 @@ export default function AthleteProfile({ athlete, onBack }) {
 
   function sessionsByDate(dateStr) {
     return sessions.filter(s => s.date === dateStr)
+  }
+
+  async function saveEdit() {
+    setEditSaving(true)
+    await supabase.from('profiles').update({ name: editForm.name, sport: editForm.sport, mode: editForm.mode }).eq('id', athlete.id)
+    athlete.name = editForm.name
+    athlete.sport = editForm.sport
+    athlete.mode = editForm.mode
+    setEditSaving(false)
+    setShowEdit(false)
   }
 
   async function assignSession() {
@@ -103,6 +116,7 @@ export default function AthleteProfile({ athlete, onBack }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
         <button className="btn sm" onClick={onBack}>← Volver</button>
+        <button className="btn sm" onClick={() => setShowEdit(true)} style={{ marginLeft: 'auto' }}>✏️ Editar</button>
         <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#4ade80', fontSize: '14px' }}>
           {athlete.name.split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2)}
         </div>
@@ -393,6 +407,36 @@ export default function AthleteProfile({ athlete, onBack }) {
       {/* DASHBOARD TAB */}
       {tab === 'dashboard' && (
         <AthleteDashboard athlete={athlete} onBack={() => setTab('metrics')} />
+      )}
+
+      {/* EDIT MODAL */}
+      {showEdit && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowEdit(false)}>
+          <div className="modal">
+            <h3>Editar atleta</h3>
+            <div className="field">
+              <label>Nombre</label>
+              <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>Deporte</label>
+              <select value={editForm.sport} onChange={e => setEditForm({ ...editForm, sport: e.target.value })}>
+                {['Fútbol','Atletismo','Natación','Baloncesto','Ciclismo','Tenis','Gym','Otro'].map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>Modo de entrenamiento</label>
+              <select value={editForm.mode} onChange={e => setEditForm({ ...editForm, mode: e.target.value })}>
+                <option value="online">🌐 Online / A distancia</option>
+                <option value="presencial">🏋️ Presencial</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => setShowEdit(false)}>Cancelar</button>
+              <button className="btn primary" onClick={saveEdit} disabled={editSaving}>{editSaving ? 'Guardando...' : 'Guardar cambios'}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ASSIGN MODAL */}
