@@ -35,7 +35,12 @@ export default function CoachMetrics() {
   async function save() {
     if (!form.weight || !selectedAthlete) { alert('Selecciona un atleta y agrega el peso'); return }
     setSaving(true)
-    const { error } = await supabase.from('metrics').insert({ ...form, user_id: selectedAthlete, date: new Date().toISOString().split('T')[0] })
+    const clean = {}
+    Object.entries(form).forEach(([k, v]) => {
+      if (k === 'goal' || k === 'note') { clean[k] = v }
+      else { clean[k] = v === '' ? null : parseFloat(v) || null }
+    })
+    const { error } = await supabase.from('metrics').insert({ ...clean, user_id: selectedAthlete, date: new Date().toISOString().split('T')[0] })
     if (error) { alert('Error al guardar: ' + error.message); setSaving(false); return }
     setForm({ weight:'', body_fat:'', muscle_pct:'', muscle_kg:'', water_pct:'', imc:'', body_age:'', fat_visceral:'', bones_kg:'', obesity_grade:'', arm_r:'', arm_l:'', arm_r_flex:'', arm_l_flex:'', leg_r:'', leg_l:'', waist:'', goal:'Ganar músculo', note:'' })
     setSaving(false)
