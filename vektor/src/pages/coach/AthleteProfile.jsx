@@ -12,8 +12,9 @@ function toISO(y, m, d) {
 
 export default function AthleteProfile({ athlete, onBack }) {
   const { user } = useAuth()
-  const [tab, setTab] = useState('calendar')
+  const [tab, setTab] = useState('routines')
   const [sessions, setSessions] = useState([])
+  const [allRoutines, setAllRoutines] = useState([])
   const [metrics, setMetrics] = useState([])
   const [rmRecords, setRmRecords] = useState([])
   const [routines, setRoutines] = useState([])
@@ -26,16 +27,18 @@ export default function AthleteProfile({ athlete, onBack }) {
   useEffect(() => { fetchAll() }, [athlete.id])
 
   async function fetchAll() {
-    const [{ data: s }, { data: m }, { data: r }, { data: ro }] = await Promise.all([
+    const [{ data: s }, { data: m }, { data: r }, { data: ro }, { data: allR }] = await Promise.all([
       supabase.from('sessions').select('*, routines(name,exercises_data)').eq('athlete_id', athlete.id).order('date', { ascending: false }),
       supabase.from('metrics').select('*').eq('user_id', athlete.id).order('date', { ascending: false }),
       supabase.from('rm_records').select('*').eq('user_id', athlete.id).order('date', { ascending: false }),
-      supabase.from('routines').select('id,name').eq('coach_id', user.id).order('name')
+      supabase.from('routines').select('id,name').eq('coach_id', user.id).order('name'),
+      supabase.from('routines').select('*').eq('coach_id', user.id).order('created_at', { ascending: false })
     ])
     setSessions(s || [])
     setMetrics(m || [])
     setRmRecords(r || [])
     setRoutines(ro || [])
+    setAllRoutines(allR || [])
     if (ro?.length) setAssignForm(f => ({ ...f, routine_id: ro[0].id }))
   }
 
@@ -82,6 +85,7 @@ export default function AthleteProfile({ athlete, onBack }) {
   }, {})
 
   const TABS = [
+    { id: 'routines', label: 'Rutinas' },
     { id: 'calendar', label: 'Calendario' },
     { id: 'sessions', label: 'Sesiones' },
     { id: 'metrics', label: 'Métricas' },
@@ -126,6 +130,41 @@ export default function AthleteProfile({ athlete, onBack }) {
           }}>{t.label}</button>
         ))}
       </div>
+
+      {/* ROUTINES TAB */}
+      {tab === 'routines' && (
+        <div>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '12px' }}>Rutinas disponibles</div>
+          {allRoutines.length === 0 && <div className="empty">No hay rutinas creadas aún. Ve a la pestaña Rutinas del menú principal para crear una.</div>}
+          {allRoutines.map(r => {
+            const exData = (() => { try { return r.exercises_data ? JSON.parse(r.exercises_data) : null } catch { return null } })()
+            return (
+              <div key={r.id} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '14px' }}>{r.name}</div>
+                  <span style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>{r.sport}</span>
+                </div>
+                {exData && exData.map((ex, ei) => (
+                  <div key={ei} style={{ marginBottom: '8px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#aaa', marginBottom: '4px' }}>{ex.name}</div>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {ex.series && ex.series.map((s, si) => (
+                        <span key={si} style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', color: '#f0f0f0' }}>
+                          S{si+1}: {s.reps||'?'} × <span style={{ color: '#4ade80', fontWeight: 700 }}>{s.weight||'?'}kg</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <button className="btn primary sm" style={{ width: '100%', marginTop: '8px' }}
+                  onClick={() => { setAssignForm(f => ({ ...f, routine_id: r.id })); setSelectedDate(today); setShowAssign(true) }}>
+                  Asignar a {athlete.name.split(' ')[0]}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* CALENDAR TAB */}
       {tab === 'calendar' && (

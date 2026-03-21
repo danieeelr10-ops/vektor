@@ -16,7 +16,7 @@ export default function Athletes() {
   async function fetchAll() {
     const [{ data: a }, { data: s }] = await Promise.all([
       supabase.from('profiles').select('*').eq('role', 'athlete').order('name'),
-      supabase.from('sessions').select('id,athlete_id,completed')
+      supabase.from('sessions').select('id,athlete_id,completed,date').order('date', { ascending: false })
     ])
     setAthletes(a || [])
     setSessions(s || [])
@@ -56,23 +56,37 @@ export default function Athletes() {
         const total = sessions.filter(s => s.athlete_id === a.id).length
         const done = sessions.filter(s => s.athlete_id === a.id && s.completed).length
         return (
-          <div key={a.id} onClick={() => setSelected(a)}
-            style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', transition: 'border-color .15s' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(74,222,128,0.3)'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}
-          >
-            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#4ade80', flexShrink: 0 }}>
-              {initials(a.name)}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '14px' }}>{a.name}</div>
-              <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>{a.sport} · {total} sesiones · {done} completadas</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80', padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>{a.sport}</span>
-              <span style={{ color: '#555', fontSize: '18px' }}>›</span>
-            </div>
-          </div>
+          {(() => {
+            const lastSession = sessions.filter(s => s.athlete_id === a.id)[0]
+            const lastDate = lastSession?.date
+            const daysSince = lastDate ? Math.floor((new Date() - new Date(lastDate)) / (1000*60*60*24)) : null
+            const isActive = daysSince !== null && daysSince <= 14
+            const isRecent = daysSince !== null && daysSince <= 30
+            const dotColor = isActive ? '#4ade80' : isRecent ? '#fbbf24' : '#555'
+            const statusLabel = isActive ? 'Activo' : isRecent ? 'Reciente' : total > 0 ? 'Inactivo' : 'Sin sesiones'
+            return (
+              <div key={a.id} onClick={() => setSelected(a)}
+                style={{ background: '#111', border: `1px solid ${isActive ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', transition: 'border-color .15s' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(74,222,128,0.3)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = isActive ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.07)'}
+              >
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#4ade80' }}>
+                    {initials(a.name)}
+                  </div>
+                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', background: dotColor, border: '2px solid #111' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '14px' }}>{a.name}</div>
+                  <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>{a.sport} · {total} sesiones · {done} completadas{lastDate ? ` · última: ${lastDate}` : ''}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ background: dotColor === '#4ade80' ? 'rgba(74,222,128,0.12)' : dotColor === '#fbbf24' ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.06)', color: dotColor, padding: '3px 10px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>{statusLabel}</span>
+                  <span style={{ color: '#555', fontSize: '18px' }}>›</span>
+                </div>
+              </div>
+            )
+          })()}
         )
       })}
 
