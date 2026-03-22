@@ -48,7 +48,7 @@ export default function AthleteDashboard() {
         {tab === 'history' && <SessionHistory />}
         {tab === 'metrics' && <Metrics />}
         {tab === 'rm' && <RMMaximo />}
-        {tab === 'progress' && <Progress />}
+        {tab === 'progress' && <AthleteDashboardView />}
       </div>
     </div>
   )
