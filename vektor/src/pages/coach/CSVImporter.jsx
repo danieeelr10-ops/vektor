@@ -60,8 +60,9 @@ function parseRoutineCSV(text) {
 
     // Skip header rows
     if (c1.toUpperCase() === 'EJERCICIO') return
-    // Skip rest/timing rows
-    if (c1.startsWith('⏱') || c1.startsWith('Descanso')) return
+    // Skip rest/timing rows and empty exercise names
+    if (c1.startsWith('⏱') || c1.startsWith('Descanso') || c1.startsWith('"⏱') || c1.includes('Descanso entre')) return
+    if (!c1 || c1.length < 2) return
 
     if (!currentRoutine) return
 

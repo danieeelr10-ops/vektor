@@ -270,6 +270,12 @@ function RoutineDetail({ routine, onBack, onSaved, exercises, setExercises, coac
               <div style={{ textAlign: 'center', padding: '8px 4px' }} onClick={e => { e.stopPropagation(); removeExercise(idx) }}>
                 <span style={{ color: '#f87171', fontSize: '14px', cursor: 'pointer' }}>×</span>
               </div>
+              <div style={{ textAlign: 'center', padding: '4px 2px' }}>
+                <button
+                  onClick={e => { e.stopPropagation(); if (item.name) toggleExpand(idx) }}
+                  style={{ width: '22px', height: '22px', borderRadius: '5px', border: `1px solid ${item.expanded ? 'rgba(74,222,128,0.4)' : 'rgba(255,255,255,0.1)'}`, background: item.expanded ? 'rgba(74,222,128,0.12)' : 'transparent', color: item.expanded ? '#4ade80' : '#555', cursor: item.name ? 'pointer' : 'default', fontSize: '9px', fontFamily: 'inherit' }}
+                >{item.expanded ? '▲' : '▼'}</button>
+              </div>
             </div>
 
             {/* Expanded series editor */}
