@@ -4,6 +4,7 @@ import Athletes from './Athletes'
 import Routines from './Routines'
 import CoachAgenda from './Agenda'
 import CSVImporter from './CSVImporter'
+import Invitations from './Invitations'
 import CoachMetrics from './Metrics'
 
 const TABS = [
@@ -12,6 +13,7 @@ const TABS = [
   { id:'agenda', label:'Agenda' },
   { id:'metrics', label:'Métricas' },
   { id:'import', label:'Importar' },
+  { id:'invitations', label:'Invitaciones' },
 ]
 
 export default function CoachDashboard() {
@@ -48,6 +50,7 @@ export default function CoachDashboard() {
         {tab==='agenda' && <CoachAgenda />}
         {tab==='metrics' && <CoachMetrics />}
         {tab==='import' && <CSVImporter />}
+        {tab==='invitations' && <Invitations />}
       </div>
     </div>
   )
