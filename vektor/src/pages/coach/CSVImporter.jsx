@@ -30,7 +30,63 @@ function detectType(text) {
   if (lower.includes('bioimpedancia') || lower.includes('% grasa') || lower.includes('músculos')) return 'bio'
   if (lower.includes('lun') && lower.includes('mar') && lower.includes('fuerza')) return 'sessions'
   if (lower.includes('circunferencia') || lower.includes('brazo') || lower.includes('cintura')) return 'circ'
+  if (lower.includes('sesión') || lower.includes('sesion') || lower.includes('ejercicio') && lower.includes('series') && lower.includes('repeticiones')) return 'routine'
   return 'unknown'
+}
+
+function parseRoutineCSV(text) {
+  const lines = text.split('\n').map(l => l.split(','))
+  const routines = []
+  let currentRoutine = null
+
+  lines.forEach(cols => {
+    const c1 = (cols[1] || '').trim()
+    if (!c1) return
+
+    // Detect session header: "SESIÓN 1 — Pecho + Espalda"
+    const sessionMatch = c1.match(/SESI[OÓ]N\s*\d+\s*[—–-]+\s*(.+)/i)
+    if (sessionMatch) {
+      if (currentRoutine) routines.push(currentRoutine)
+      currentRoutine = { name: sessionMatch[1].trim(), exercises: [] }
+      return
+    }
+
+    // Skip header rows
+    if (c1.toUpperCase() === 'EJERCICIO') return
+    // Skip rest/timing rows
+    if (c1.startsWith('⏱') || c1.startsWith('Descanso')) return
+
+    if (!currentRoutine) return
+
+    const exercise = c1
+    const direction = (cols[2] || '').trim()
+    const seriesCount = parseInt(cols[3]) || 1
+    const repsStr = (cols[4] || '').trim()
+    const obs = (cols[5] || '').trim()
+
+    if (!exercise || exercise.toLowerCase() === 'rutina') return
+
+    // Parse reps: "12/12/10/10" or "10-10-10" or "10 x brazo"
+    let repsList = []
+    if (repsStr.includes('/')) repsList = repsStr.split('/').map(r => r.trim())
+    else if (repsStr.includes('-')) repsList = repsStr.split('-').map(r => r.trim())
+    else repsList = Array(seriesCount).fill(repsStr)
+
+    // Build series array
+    const series = Array.from({ length: seriesCount }, (_, i) => ({
+      reps: repsList[i] || repsList[0] || '',
+      weight: ''
+    }))
+
+    currentRoutine.exercises.push({
+      name: exercise,
+      note: [direction, obs].filter(Boolean).join(' · ') || '',
+      series
+    })
+  })
+
+  if (currentRoutine) routines.push(currentRoutine)
+  return routines
 }
 
 function parseSessionsCSV(text) {
@@ -157,6 +213,7 @@ export default function CSVImporter() {
         if (type === 'sessions') data = parseSessionsCSV(text)
         else if (type === 'bio') data = parseBioCSV(text)
         else if (type === 'circ') data = parseCircCSV(text)
+        else if (type === 'routine') data = parseRoutineCSV(text)
         if (!data?.length) {
           setError(`No se pudieron leer datos de "${file.name}". Verifica el formato.`)
           return
@@ -217,6 +274,23 @@ export default function CSVImporter() {
         const { error: err } = await supabase.from('metrics').insert(rows)
         if (err) { setError('Error métricas: ' + err.message); setImporting(false); return }
         totalImported += rows.length
+      }
+
+      if (file.type === 'routine') {
+        for (const routine of file.data) {
+          const description = routine.exercises.map(ex =>
+            ex.series.map((s, si) => `${ex.name} — S${si+1}: ${s.reps||'?'} reps @ ?kg`).join('\n')
+          ).join('\n')
+          const { error: err } = await supabase.from('routines').insert({
+            name: routine.name,
+            sport: 'Gym',
+            coach_id: user.id,
+            description,
+            exercises_data: JSON.stringify(routine.exercises)
+          })
+          if (err) { setError('Error rutina: ' + err.message); setImporting(false); return }
+        }
+        totalImported += file.data.length
       }
 
       if (file.type === 'circ' && !files.find(f => f.type === 'bio')) {
@@ -296,7 +370,7 @@ export default function CSVImporter() {
             <div>
               <div style={{ fontWeight: 700, fontSize: '13px', color: '#f0f0f0' }}>{file.name}</div>
               <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
-                {file.type === 'sessions' ? '📅 Planificación de sesiones' : file.type === 'bio' ? '⚖️ Bioimpedancia' : '📏 Circunferencias'}
+                {file.type === 'sessions' ? '📅 Planificación de sesiones' : file.type === 'bio' ? '⚖️ Bioimpedancia' : file.type === 'circ' ? '📏 Circunferencias' : '💪 Rutina de entrenamiento'}
                 {' · '}{file.data.length} registros
               </div>
             </div>
@@ -322,6 +396,21 @@ export default function CSVImporter() {
             </>
           )}
 
+          {file.type === 'routine' && (
+            <div>
+              {file.data.map((r, ri) => (
+                <div key={ri} style={{ background: '#1a1a1a', borderRadius: '8px', padding: '8px 12px', marginBottom: '6px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '12px', color: '#f0f0f0', marginBottom: '4px' }}>{r.name}</div>
+                  <div style={{ fontSize: '11px', color: '#888' }}>{r.exercises.length} ejercicios · {r.exercises.reduce((a,ex)=>a+ex.series.length,0)} series totales</div>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '5px' }}>
+                    {r.exercises.map((ex, ei) => (
+                      <span key={ei} style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '5px', padding: '2px 7px', fontSize: '10px', color: '#4ade80' }}>{ex.name}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           {file.type === 'bio' && (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
