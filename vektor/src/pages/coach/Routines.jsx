@@ -121,8 +121,16 @@ function RoutineDetail({ routine, onBack, onSaved, exercises, setExercises, coac
     const u = [...items]
     u[idx] = { ...u[idx], name: val }
     setItems(u)
-    if (val.length < 2) { setSuggestions(s => ({ ...s, [idx]: [] })); return }
-    setSuggestions(s => ({ ...s, [idx]: exercises.filter(e => e.name.toLowerCase().includes(val.toLowerCase())).slice(0, 5) }))
+    if (val.length < 1) { setSuggestions(s => ({ ...s, [idx]: [] })); return }
+    const filtered = exercises
+      .filter(e => e.name.toLowerCase().includes(val.toLowerCase()))
+      .sort((a, b) => {
+        const ai = a.name.toLowerCase().indexOf(val.toLowerCase())
+        const bi = b.name.toLowerCase().indexOf(val.toLowerCase())
+        return ai - bi
+      })
+      .slice(0, 8)
+    setSuggestions(s => ({ ...s, [idx]: filtered }))
   }
 
   function selectFromSuggestion(idx, ex) {
@@ -228,20 +236,22 @@ function RoutineDetail({ routine, onBack, onSaved, exercises, setExercises, coac
               onClick={() => item.name && toggleExpand(idx)}
               style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 60px 28px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: item.name ? 'pointer' : 'default', background: item.expanded ? 'rgba(74,222,128,0.04)' : 'transparent' }}
             >
-              <div style={{ padding: '8px', position: 'relative' }}>
+              <div style={{ padding: '6px 8px', position: 'relative' }}>
                 <input
                   value={item.name}
                   onChange={e => handleExInput(idx, e.target.value)}
                   onClick={e => e.stopPropagation()}
-                  placeholder="Buscar ejercicio..."
-                  style={{ marginBottom: 0, background: 'transparent', border: 'none', padding: 0, fontSize: '12px', fontWeight: item.name ? 600 : 400, color: item.name ? '#f0f0f0' : '#555', width: '100%' }}
+                  onFocus={e => { e.stopPropagation(); if (item.name.length >= 2) handleExInput(idx, item.name) }}
+                  placeholder="Escribe para buscar..."
+                  style={{ marginBottom: 0, fontSize: '12px', fontWeight: item.name ? 600 : 400, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', padding: '5px 8px', width: '100%', color: '#f0f0f0' }}
                 />
                 {suggestions[idx]?.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#1a1a1a', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '8px', zIndex: 50, overflow: 'hidden' }}
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#1a1a1a', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '8px', zIndex: 100, overflow: 'hidden', maxHeight: '200px', overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}
                     onClick={e => e.stopPropagation()}>
                     {suggestions[idx].map(s => (
-                      <div key={s.id} onClick={() => selectFromSuggestion(idx, s)} style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>{s.name}</span><span style={{ fontSize: '10px', color: '#555' }}>{s.category}</span>
+                      <div key={s.id} onClick={() => selectFromSuggestion(idx, s)} style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: '#f0f0f0' }}>{s.name}</span>
+                        <span style={{ fontSize: '10px', color: '#555', background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: '4px' }}>{s.category}</span>
                       </div>
                     ))}
                   </div>
