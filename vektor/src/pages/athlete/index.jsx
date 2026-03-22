@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { Metrics, RMMaximo, Progress } from './Tabs'
+import { Metrics, RMMaximo } from './Tabs'
 import AthleteCalendar from './AthleteCalendar'
 import SessionHistory from './SessionHistory'
+import AthleteDashboardView from './AthleteDashboardView'
 
 export default function AthleteDashboard() {
   const { profile, signOut } = useAuth()
