@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth'
 import Athletes from './Athletes'
 import Routines from './Routines'
 import CoachAgenda from './Agenda'
+import CSVImporter from './CSVImporter'
 import CoachMetrics from './Metrics'
 
 const TABS = [
@@ -10,6 +11,7 @@ const TABS = [
   { id:'routines', label:'Rutinas' },
   { id:'agenda', label:'Agenda' },
   { id:'metrics', label:'Métricas' },
+  { id:'import', label:'Importar' },
 ]
 
 export default function CoachDashboard() {
@@ -45,6 +47,7 @@ export default function CoachDashboard() {
         {tab==='routines' && <Routines />}
         {tab==='agenda' && <CoachAgenda />}
         {tab==='metrics' && <CoachMetrics />}
+        {tab==='import' && <CSVImporter />}
       </div>
     </div>
   )
