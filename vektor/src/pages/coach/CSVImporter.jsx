@@ -27,10 +27,17 @@ function cleanNum(str) {
 // Detect file type
 function detectType(text) {
   const lower = text.toLowerCase()
-  if (lower.includes('bioimpedancia') || lower.includes('% grasa') || lower.includes('músculos')) return 'bio'
-  if (lower.includes('lun') && lower.includes('mar') && lower.includes('fuerza')) return 'sessions'
-  if (lower.includes('circunferencia') || lower.includes('brazo') || lower.includes('cintura')) return 'circ'
-  if (lower.includes('sesión') || lower.includes('sesion') || lower.includes('ejercicio') && lower.includes('series') && lower.includes('repeticiones')) return 'routine'
+  // Bioimpedance: has bioimpedancia or grasa + imc columns
+  if (lower.includes('bioimpedancia') || (lower.includes('grasa') && lower.includes('imc') && lower.includes('serie'))) return 'bio'
+  // Session calendar: has month names + day-of-week headers
+  if ((lower.includes('lun') && lower.includes('mar')) || (lower.includes('enero') && lower.includes('fuerza'))) return 'sessions'
+  // Circumferences
+  if (lower.includes('circunferencia') || (lower.includes('brazo') && lower.includes('cintura'))) return 'circ'
+  // Routine: has EJERCICIO + SERIES + REPETICIONES headers OR has sesion/session pattern
+  if (lower.includes('ejercicio') && lower.includes('series') && lower.includes('repeticiones')) return 'routine'
+  if (lower.includes('rutina') && lower.includes('series')) return 'routine'
+  // Also detect by SESI pattern (handles accent encoding issues)
+  if (lower.includes('sesi') && lower.includes('ejercicio')) return 'routine'
   return 'unknown'
 }
 
@@ -320,7 +327,7 @@ export default function CSVImporter() {
       <div style={{ background: '#111', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px' }}>
         <div style={{ fontSize: '10px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '4px' }}>Importador de historial</div>
         <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.6 }}>
-          Soporta 3 tipos de archivo: <strong style={{ color: '#f0f0f0' }}>Planificación</strong> (calendario mensual), <strong style={{ color: '#f0f0f0' }}>Bioimpedancia</strong> y <strong style={{ color: '#f0f0f0' }}>Circunferencias</strong>. Puedes subir varios a la vez.
+          Soporta 4 tipos: <strong style={{ color: '#f0f0f0' }}>Planificación</strong> (calendario mensual), <strong style={{ color: '#f0f0f0' }}>Bioimpedancia</strong>, <strong style={{ color: '#f0f0f0' }}>Circunferencias</strong> y <strong style={{ color: '#f0f0f0' }}>Rutinas</strong>. Puedes subir varios a la vez.
         </div>
       </div>
 
