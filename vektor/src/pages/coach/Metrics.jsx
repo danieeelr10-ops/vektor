@@ -7,6 +7,8 @@ export default function CoachMetrics() {
   const [metrics, setMetrics] = useState([])
   const [tab, setTab] = useState('registro')
   const [saving, setSaving] = useState(false)
+  const [pdfFile, setPdfFile] = useState(null)
+  const [pdfUploading, setPdfUploading] = useState(false)
   const [form, setForm] = useState({
     weight:'', body_fat:'', muscle_pct:'', muscle_kg:'', water_pct:'', imc:'', body_age:'',
     fat_visceral:'', bones_kg:'', obesity_grade:'',
@@ -32,14 +34,27 @@ export default function CoachMetrics() {
     setMetrics(data || [])
   }
 
+  async function uploadPdf(athleteId, date) {
+    if (!pdfFile) return null
+    const path = `${athleteId}/${date}-${Date.now()}.pdf`
+    const { error } = await supabase.storage.from('metrics-pdfs').upload(path, pdfFile, { contentType: 'application/pdf' })
+    if (error) { alert('Error subiendo PDF: ' + error.message); return null }
+    const { data } = supabase.storage.from('metrics-pdfs').getPublicUrl(path)
+    return data.publicUrl
+  }
+
   async function save() {
     if (!form.weight || !selectedAthlete) { alert('Selecciona un atleta y agrega el peso'); return }
     setSaving(true)
+    const dateStr = new Date().toISOString().split('T')[0]
+    let pdfUrl = null
+    if (pdfFile) { setPdfUploading(true); pdfUrl = await uploadPdf(selectedAthlete, dateStr); setPdfUploading(false) }
     const clean = {}
     Object.entries(form).forEach(([k, v]) => {
       if (k === 'goal' || k === 'note') { clean[k] = v }
       else { clean[k] = v === '' ? null : parseFloat(v) || null }
     })
+    if (pdfUrl) clean.pdf_url = pdfUrl
     const { error } = await supabase.from('metrics').insert({ ...clean, user_id: selectedAthlete, date: new Date().toISOString().split('T')[0] })
     if (error) { alert('Error al guardar: ' + error.message); setSaving(false); return }
     setForm({ weight:'', body_fat:'', muscle_pct:'', muscle_kg:'', water_pct:'', imc:'', body_age:'', fat_visceral:'', bones_kg:'', obesity_grade:'', arm_r:'', arm_l:'', arm_r_flex:'', arm_l_flex:'', leg_r:'', leg_l:'', waist:'', goal:'Ganar músculo', note:'' })
