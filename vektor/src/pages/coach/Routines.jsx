@@ -233,8 +233,7 @@ function RoutineDetail({ routine, onBack, onSaved, exercises, setExercises, coac
           <div key={idx}>
             {/* Compact row */}
             <div
-              onClick={() => item.name && toggleExpand(idx)}
-              style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 60px 28px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: item.name ? 'pointer' : 'default', background: item.expanded ? 'rgba(74,222,128,0.04)' : 'transparent' }}
+              style={{ display: 'grid', gridTemplateColumns: '1fr 40px 40px 60px 28px 28px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', background: item.expanded ? 'rgba(74,222,128,0.04)' : 'transparent' }}
             >
               <div style={{ padding: '6px 8px', position: 'relative' }}>
                 <input
