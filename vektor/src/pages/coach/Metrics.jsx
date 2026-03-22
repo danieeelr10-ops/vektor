@@ -124,8 +124,17 @@ export default function CoachMetrics() {
               </select>
             </div>
             <div className="field"><label>Nota</label><input value={form.note} onChange={e=>setForm({...form,note:e.target.value})} placeholder="Observaciones del entrenador..." /></div>
-            <button className="btn primary" style={{ width:'100%' }} onClick={save} disabled={saving}>
-              {saving ? 'Guardando...' : `Guardar medidas de ${athlete?.name || 'atleta'}`}
+            <div className="field">
+              <label>PDF de báscula (opcional)</label>
+              <label style={{ display:'flex', alignItems:'center', gap:'8px', background:'#1a1a1a', border:`1px solid ${pdfFile ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`, borderRadius:'8px', padding:'9px 12px', cursor:'pointer' }}>
+                <span style={{ fontSize:'16px' }}>📄</span>
+                <span style={{ fontSize:'12px', color: pdfFile ? 'var(--green)' : 'var(--text2)', flex:1 }}>{pdfFile ? pdfFile.name : 'Subir PDF de báscula'}</span>
+                {pdfFile && <span onClick={e=>{e.preventDefault();e.stopPropagation();setPdfFile(null)}} style={{ color:'#f87171', fontSize:'16px', lineHeight:1 }}>×</span>}
+                <input type="file" accept=".pdf,application/pdf" onChange={e=>setPdfFile(e.target.files[0]||null)} style={{ display:'none' }} />
+              </label>
+            </div>
+            <button className="btn primary" style={{ width:'100%' }} onClick={save} disabled={saving||pdfUploading}>
+              {pdfUploading ? 'Subiendo PDF...' : saving ? 'Guardando...' : `Guardar medidas de ${athlete?.name || 'atleta'}`}
             </button>
           </div>
         </>
