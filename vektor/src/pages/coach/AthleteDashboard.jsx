@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import VolumePlanner from './VolumePlanner'
 
 const tooltipStyle = { background: '#111', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '8px', fontSize: '11px' }
 
@@ -35,6 +36,18 @@ function Delta({ label, value, unit = '', invert = false }) {
     <div style={{ background: '#1a1a1a', borderRadius: '8px', padding: '10px 12px', textAlign: 'center' }}>
       <div style={{ fontSize: '9px', color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700, marginBottom: '4px' }}>{label}</div>
       <div style={{ fontSize: '18px', fontWeight: 700, color, fontFamily: 'monospace' }}>{sign}{num.toFixed(1)}<span style={{ fontSize: '10px' }}>{unit}</span></div>
+      {/* PLANIFICADOR TAB */}
+      {activeTab === 'planner' && (
+        <div>
+          <div style={{ background: '#111', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '12px', padding: '12px 16px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '4px' }}>Planificador de volumen — {athlete.name}</div>
+            <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.6 }}>
+              Basado en los datos de ejecución real, la app sugiere los incrementos de carga para la próxima semana. Ajusta los % y genera una nueva rutina lista para asignar.
+            </div>
+          </div>
+          <VolumePlanner athlete={athlete} />
+        </div>
+      )}
     </div>
   )
 }
@@ -45,6 +58,7 @@ export default function AthleteDashboard({ athlete, onBack }) {
   const [exercises, setExercises] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('volumen')
+  const [showPlanner, setShowPlanner] = useState(false)
 
   useEffect(() => { fetchAll() }, [athlete.id])
 
@@ -168,7 +182,7 @@ export default function AthleteDashboard({ athlete, onBack }) {
 
       {/* Sub tabs */}
       <div style={{ display: 'flex', background: '#1a1a1a', borderRadius: '10px', padding: '3px', gap: '2px', marginBottom: '16px' }}>
-        {[['volumen','Volumen semanal'],['progresion','Progresión'],['metricas','Métricas']].map(([id, lbl]) => (
+        {[['volumen','Volumen'],['progresion','Progresión'],['metricas','Métricas'],['planner','Planificador']].map(([id, lbl]) => (
           <button key={id} onClick={() => setActiveTab(id)} style={{
             flex: 1, padding: '7px 4px', border: activeTab===id ? '1px solid rgba(74,222,128,0.3)' : 'none',
             background: activeTab===id ? '#222' : 'transparent',
@@ -419,6 +433,18 @@ export default function AthleteDashboard({ athlete, onBack }) {
               </table>
             </div>
           </div>
+        </div>
+      )}
+      {/* PLANIFICADOR TAB */}
+      {activeTab === 'planner' && (
+        <div>
+          <div style={{ background: '#111', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '12px', padding: '12px 16px', marginBottom: '14px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '4px' }}>Planificador de volumen — {athlete.name}</div>
+            <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.6 }}>
+              Basado en los datos de ejecución real, la app sugiere los incrementos de carga para la próxima semana. Ajusta los % y genera una nueva rutina lista para asignar.
+            </div>
+          </div>
+          <VolumePlanner athlete={athlete} />
         </div>
       )}
     </div>
