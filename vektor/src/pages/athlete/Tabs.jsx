@@ -218,9 +218,17 @@ export function Metrics() {
         </div>
       ) : metrics.map(m => (
         <div className="card" key={m.id} style={{ marginBottom:'10px' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'10px' }}>
-            <span style={{ fontSize:'12px', fontFamily:'var(--mono)', color:'var(--text2)' }}>{m.date}</span>
-            {m.goal && <span style={{ fontSize:'11px', color:'var(--green)', fontWeight:600 }}>{m.goal}</span>}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px' }}>
+            <div>
+              <div style={{ fontSize:'12px', fontFamily:'var(--mono)', color:'var(--text2)' }}>{m.date}</div>
+              {m.goal && <div style={{ fontSize:'11px', color:'var(--green)', fontWeight:600, marginTop:'2px' }}>{m.goal}</div>}
+            </div>
+            {m.pdf_url && (
+              <a href={m.pdf_url} target="_blank" rel="noreferrer"
+                style={{ display:'inline-flex', alignItems:'center', gap:'5px', background:'rgba(74,222,128,0.1)', border:'1px solid rgba(74,222,128,0.25)', borderRadius:'7px', padding:'5px 10px', fontSize:'11px', color:'var(--green)', textDecoration:'none', fontWeight:700 }}>
+                📄 Ver PDF báscula
+              </a>
+            )}
           </div>
           <div className="g3" style={{ marginBottom:'8px' }}>
             <div className="metric"><div className="lbl">Peso</div><div className="val" style={{ fontSize:'16px' }}>{m.weight}<span style={{ fontSize:'10px' }}> kg</span></div></div>
