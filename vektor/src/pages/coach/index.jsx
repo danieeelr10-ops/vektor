@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import AthleteDashboard from '../athlete/index'
 import Athletes from './Athletes'
 import Routines from './Routines'
 import CoachAgenda from './Agenda'
@@ -19,6 +20,26 @@ const TABS = [
 export default function CoachDashboard() {
   const { profile, signOut } = useAuth()
   const [tab, setTab] = useState('athletes')
+  const [athleteMode, setAthleteMode] = useState(false)
+
+  if (athleteMode) return (
+    <div>
+      <div className="topbar">
+        <div className="logo">
+          <div className="logo-mark">V</div>
+          Vektor <span>Training</span>
+          <span style={{ fontSize:'9px', fontWeight:700, textTransform:'uppercase', padding:'2px 6px', borderRadius:'4px', marginLeft:'6px', background:'rgba(74,222,128,0.15)', color:'#4ade80' }}>Mi entreno</span>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+          <button onClick={() => setAthleteMode(false)} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(96,165,250,0.12)', border:'1px solid rgba(96,165,250,0.2)', borderRadius:'8px', padding:'5px 10px', color:'#60a5fa', fontSize:'11px', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            ← Vista Coach
+          </button>
+          <button className="btn sm ghost" onClick={signOut}>Salir</button>
+        </div>
+      </div>
+      <AthleteDashboard coachAsAthlete={true} />
+    </div>
+  )
 
   return (
     <div>
@@ -28,7 +49,10 @@ export default function CoachDashboard() {
           Vektor <span>Training</span>
           <span style={{ fontSize:'10px', color:'var(--text3)', fontWeight:400 }}>Coach</span>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+          <button onClick={() => setAthleteMode(true)} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(74,222,128,0.08)', border:'1px solid rgba(74,222,128,0.2)', borderRadius:'8px', padding:'5px 10px', color:'#4ade80', fontSize:'11px', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            🏋️ Mi entreno
+          </button>
           <span style={{ fontSize:'12px', color:'var(--text2)' }}>{profile?.name}</span>
           <button className="btn sm ghost" onClick={signOut}>Salir</button>
         </div>
