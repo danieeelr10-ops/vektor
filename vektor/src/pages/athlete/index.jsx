@@ -5,7 +5,7 @@ import AthleteCalendar from './AthleteCalendar'
 import SessionHistory from './SessionHistory'
 import AthleteDashboardView from './AthleteDashboardView'
 
-export default function AthleteDashboard() {
+export default function AthleteDashboard({ coachAsAthlete = false }) {
   const { profile, signOut } = useAuth()
   const [tab, setTab] = useState('calendar')
   const isOnline = profile?.mode !== 'presencial'
