@@ -68,7 +68,7 @@ export default function CoachDashboard() {
           }}>{t.label}</button>
         ))}
       </div>
-      <div className="page">
+      <div className={tab === 'athletes' ? 'page-wide' : 'page'}>
         {tab==='athletes' && <Athletes />}
         {tab==='routines' && <Routines />}
         {tab==='agenda' && <CoachAgenda />}

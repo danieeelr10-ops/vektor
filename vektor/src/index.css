@@ -252,6 +252,7 @@ label {
 .logo span { color: var(--green); }
 
 .page { padding: 18px 20px; max-width: 580px; margin: 0 auto; }
+.page-wide { padding: 18px 20px; }
 
 .exercise-row {
   display: grid;

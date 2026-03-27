@@ -82,12 +82,8 @@ export default function Athletes() {
     return name.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2)
   }
 
-  if (selected) {
-    return <AthleteProfile athlete={selected} onBack={() => { setSelected(null); fetchAll() }} onUpdate={(updated) => setSelected({ ...selected, ...updated })} />
-  }
-
-  return (
-    <div className="fade-in">
+  const athleteList = (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
         <span className="stitle">Mis atletas ({athletes.length})</span>
         <button className="btn primary sm" onClick={() => setShowModal(true)}>+ Atleta</button>
@@ -103,7 +99,7 @@ export default function Athletes() {
         const payment = getPaymentStatus(payments, a.id)
 
         return (
-          <div key={a.id} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px' }}>
+          <div key={a.id} style={{ background: selected?.id === a.id ? 'rgba(74,222,128,0.05)' : '#111', border: `1px solid ${selected?.id === a.id ? 'rgba(74,222,128,0.35)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', transition: 'border-color .15s, background .15s' }}>
             <div
               style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
               onClick={() => setSelected(a)}
@@ -155,6 +151,7 @@ export default function Athletes() {
       })}
 
       {/* New athlete modal */}
+
       {showModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal">
@@ -206,6 +203,20 @@ export default function Athletes() {
           </div>
         </div>
       )}
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 110px)' }}>
+      <div style={{ width: '320px', flexShrink: 0, overflowY: 'auto', borderRight: '1px solid rgba(255,255,255,0.07)', paddingRight: '16px' }}>
+        {athleteList}
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto', paddingLeft: '20px' }}>
+        {selected
+          ? <AthleteProfile athlete={selected} onBack={() => { setSelected(null); fetchAll() }} onUpdate={(updated) => setSelected({ ...selected, ...updated })} />
+          : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#333', fontSize: '13px' }}>Selecciona un atleta</div>
+        }
+      </div>
     </div>
   )
 }
