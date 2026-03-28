@@ -10,6 +10,7 @@ export function Today() {
   const [rpe, setRpe] = useState(null)
   const [logForm, setLogForm] = useState({ duration: '', log_notes: '' })
   const [execution, setExecution] = useState({})
+  const [showSummary, setShowSummary] = useState(null)
 
   useEffect(() => { fetchToday() }, [])
 
@@ -17,6 +18,13 @@ export function Today() {
     const today = new Date().toISOString().split('T')[0]
     const { data } = await supabase.from('sessions').select('*, routines(name,description,exercises_data)').eq('athlete_id', user.id).eq('date', today)
     setSessions(data || [])
+    const saved = {}
+    for (const s of (data || [])) {
+      if (s.execution_data) {
+        try { Object.assign(saved, JSON.parse(s.execution_data)) } catch {}
+      }
+    }
+    if (Object.keys(saved).length) setExecution(saved)
   }
 
   function getExData(s) {
@@ -24,14 +32,22 @@ export function Today() {
   }
 
   function updateExecution(sessionId, exIdx, serieIdx, field, val) {
-    setExecution(prev => {
-      const key = `${sessionId}-${exIdx}-${serieIdx}-${field}`
-      return { ...prev, [key]: val }
-    })
+    setExecution(prev => ({ ...prev, [`${sessionId}-${exIdx}-${serieIdx}-${field}`]: val }))
   }
 
   function getVal(sessionId, exIdx, serieIdx, field) {
     return execution[`${sessionId}-${exIdx}-${serieIdx}-${field}`] || ''
+  }
+
+  function isDone(sessionId, exIdx, si) {
+    return !!execution[`${sessionId}-${exIdx}-${si}-done`]
+  }
+
+  async function checkSet(sessionId, exIdx, si) {
+    const updated = { ...execution, [`${sessionId}-${exIdx}-${si}-done`]: true }
+    setExecution(updated)
+    const sessionExec = Object.fromEntries(Object.entries(updated).filter(([k]) => k.startsWith(sessionId)))
+    await supabase.from('sessions').update({ execution_data: JSON.stringify(sessionExec) }).eq('id', sessionId)
   }
 
   function calcMax(sessionId, exIdx, series) {
@@ -54,12 +70,15 @@ export function Today() {
   }
 
   async function completeSession() {
-    const execData = JSON.stringify(execution)
+    const completedSession = sessions.find(s => s.id === showLog)
+    const sessionExec = Object.fromEntries(Object.entries(execution).filter(([k]) => k.startsWith(showLog)))
     await supabase.from('sessions').update({
       completed: true, rpe: rpe || '?', duration: logForm.duration,
-      log_notes: logForm.log_notes, execution_data: execData
+      log_notes: logForm.log_notes, execution_data: JSON.stringify(sessionExec)
     }).eq('id', showLog)
-    setShowLog(null); setRpe(null); setLogForm({ duration: '', log_notes: '' }); fetchToday()
+    setShowSummary({ session: completedSession, rpe: rpe || '?', duration: logForm.duration, notes: logForm.log_notes })
+    setShowLog(null); setRpe(null); setLogForm({ duration: '', log_notes: '' })
+    fetchToday()
   }
 
   if (!sessions.length) return (
@@ -77,37 +96,38 @@ export function Today() {
       <div className="stitle" style={{ marginBottom: '12px' }}>Sesión de hoy</div>
       {sessions.map(s => {
         const exData = getExData(s)
+        const isCompleted = s.completed
         return (
           <div className="card green-border" key={s.id} style={{ marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
               <div style={{ fontWeight: 700, fontSize: '16px' }}>{s.routines?.name}</div>
-              {s.completed ? <span className="badge green">Completada</span> : <span className="badge amber">Pendiente</span>}
+              {isCompleted ? <span className="badge green">Completada</span> : <span className="badge amber">Pendiente</span>}
             </div>
             {s.notes && <div style={{ background: 'var(--green-dim)', borderLeft: '3px solid var(--green)', padding: '8px 12px', borderRadius: '0 6px 6px 0', fontSize: '13px', color: 'var(--text2)', marginBottom: '12px' }}>{s.notes}</div>}
 
             {exData ? (
               <div style={{ marginBottom: '12px' }}>
-                {exData.map((ex, exIdx) => {
-                  const nSeries = ex.series?.length || 1
-                  const isCompleted = s.completed
-                  return (
-                    <div key={exIdx} style={{ marginBottom: '14px' }}>
-                      <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px', color: 'var(--text)' }}>{ex.name}</div>
-                      {ex.note && <div style={{ fontSize: '11px', color: 'var(--text2)', fontStyle: 'italic', marginBottom: '6px' }}>{ex.note}</div>}
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '300px' }}>
-                          <thead>
-                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                              <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: '9px', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', background: 'var(--bg3)' }}>Serie</th>
-                              <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: '9px', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', background: 'var(--bg3)' }}>Reps plan</th>
-                              <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: '9px', color: 'var(--green)', fontWeight: 700, textTransform: 'uppercase', background: 'var(--bg3)' }}>Kg plan</th>
-                              <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: '9px', color: 'var(--text2)', fontWeight: 700, textTransform: 'uppercase', background: 'var(--bg3)' }}>Reps real</th>
-                              <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: '9px', color: 'var(--text2)', fontWeight: 700, textTransform: 'uppercase', background: 'var(--bg3)' }}>Kg real</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {ex.series.map((serie, si) => (
-                              <tr key={si} style={{ borderBottom: '1px solid var(--border)' }}>
+                {exData.map((ex, exIdx) => (
+                  <div key={exIdx} style={{ marginBottom: '14px' }}>
+                    <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px', color: 'var(--text)' }}>{ex.name}</div>
+                    {ex.note && <div style={{ fontSize: '11px', color: 'var(--text2)', fontStyle: 'italic', marginBottom: '6px' }}>{ex.note}</div>}
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '300px' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                            <th style={{ textAlign: 'left', padding: '6px 8px', fontSize: '9px', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', background: 'var(--bg3)' }}>Serie</th>
+                            <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: '9px', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', background: 'var(--bg3)' }}>Reps plan</th>
+                            <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: '9px', color: 'var(--green)', fontWeight: 700, textTransform: 'uppercase', background: 'var(--bg3)' }}>Kg plan</th>
+                            <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: '9px', color: 'var(--text2)', fontWeight: 700, textTransform: 'uppercase', background: 'var(--bg3)' }}>Reps real</th>
+                            <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: '9px', color: 'var(--text2)', fontWeight: 700, textTransform: 'uppercase', background: 'var(--bg3)' }}>Kg real</th>
+                            {!isCompleted && <th style={{ textAlign: 'center', padding: '6px 8px', fontSize: '9px', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', background: 'var(--bg3)' }}>✓</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ex.series.map((serie, si) => {
+                            const done = isDone(s.id, exIdx, si)
+                            return (
+                              <tr key={si} style={{ borderBottom: '1px solid var(--border)', background: done ? 'rgba(74,222,128,0.04)' : 'transparent', transition: 'background .2s' }}>
                                 <td style={{ padding: '8px', fontWeight: 700, color: 'var(--green)', fontSize: '13px' }}>S{si+1}</td>
                                 <td style={{ textAlign: 'center', padding: '8px', color: 'var(--text2)' }}>{serie.reps||'—'}</td>
                                 <td style={{ textAlign: 'center', padding: '8px', color: 'var(--green)', fontWeight: 700 }}>{serie.weight ? `${serie.weight}kg` : '—'}</td>
@@ -123,33 +143,43 @@ export function Today() {
                                     : <input type="number" step="0.5" value={getVal(s.id, exIdx, si, 'weight')} onChange={e=>updateExecution(s.id,exIdx,si,'weight',e.target.value)} style={{ width: '60px', padding: '4px 6px', textAlign: 'center', marginBottom: 0, fontSize: '12px' }} placeholder="0" />
                                   }
                                 </td>
+                                {!isCompleted && (
+                                  <td style={{ textAlign: 'center', padding: '6px 8px' }}>
+                                    {done
+                                      ? <span style={{ color: 'var(--green)', fontSize: '16px', fontWeight: 700 }}>✓</span>
+                                      : <button onClick={() => checkSet(s.id, exIdx, si)} style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer', color: 'var(--text3)', fontFamily: 'var(--font)', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>✓</button>
+                                    }
+                                  </td>
+                                )}
                               </tr>
-                            ))}
-                            <tr style={{ background: 'var(--bg3)' }}>
-                              <td colSpan={3} style={{ padding: '6px 8px', fontSize: '10px', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase' }}>Resultados</td>
-                              <td style={{ textAlign: 'center', padding: '6px 4px', fontSize: '11px' }}>
-                                <span style={{ color: 'var(--amber)', fontWeight: 700 }}>Máx: {calcMax(s.id, exIdx, ex.series)}{typeof calcMax(s.id,exIdx,ex.series)==='number'?'kg':''}</span>
-                              </td>
-                              <td style={{ textAlign: 'center', padding: '6px 4px', fontSize: '11px' }}>
-                                <span style={{ color: 'var(--blue)', fontWeight: 700 }}>Vol: {calcVolume(s.id, exIdx, ex.series)}</span>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
+                            )
+                          })}
+                          <tr style={{ background: 'var(--bg3)' }}>
+                            <td colSpan={3} style={{ padding: '6px 8px', fontSize: '10px', color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase' }}>Resultados</td>
+                            <td style={{ textAlign: 'center', padding: '6px 4px', fontSize: '11px' }}>
+                              <span style={{ color: 'var(--amber)', fontWeight: 700 }}>Máx: {calcMax(s.id, exIdx, ex.series)}{typeof calcMax(s.id,exIdx,ex.series)==='number'?'kg':''}</span>
+                            </td>
+                            <td colSpan={isCompleted ? 1 : 2} style={{ textAlign: 'center', padding: '6px 4px', fontSize: '11px' }}>
+                              <span style={{ color: 'var(--blue)', fontWeight: 700 }}>Vol: {calcVolume(s.id, exIdx, ex.series)}</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
               </div>
             ) : s.routines?.description && (
               <div style={{ fontSize: '13px', color: 'var(--text2)', whiteSpace: 'pre-line', background: 'var(--bg3)', padding: '12px', borderRadius: '8px', marginBottom: '12px', fontFamily: 'var(--mono)', lineHeight: 1.8 }}>{s.routines.description}</div>
             )}
 
-            {!s.completed && <button className="btn primary" style={{ width: '100%', padding: '12px' }} onClick={() => setShowLog(s.id)}>Registrar sesión completada</button>}
-            {s.completed && <div style={{ fontSize: '12px', color: 'var(--text2)' }}>RPE: <strong style={{ color: 'var(--green)' }}>{s.rpe}</strong> · Duración: <strong style={{ color: 'var(--green)' }}>{s.duration} min</strong>{s.log_notes && <><br /><span style={{ fontStyle: 'italic' }}>"{s.log_notes}"</span></>}</div>}
+            {!isCompleted && <button className="btn primary" style={{ width: '100%', padding: '12px' }} onClick={() => setShowLog(s.id)}>Registrar sesión completada</button>}
+            {isCompleted && <div style={{ fontSize: '12px', color: 'var(--text2)' }}>RPE: <strong style={{ color: 'var(--green)' }}>{s.rpe}</strong> · Duración: <strong style={{ color: 'var(--green)' }}>{s.duration} min</strong>{s.log_notes && <><br /><span style={{ fontStyle: 'italic' }}>"{s.log_notes}"</span></>}</div>}
           </div>
         )
       })}
+
+      {/* Complete session modal */}
       {showLog && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowLog(null)}>
           <div className="modal">
@@ -168,6 +198,43 @@ export function Today() {
               <button className="btn" onClick={() => setShowLog(null)}>Cancelar</button>
               <button className="btn primary" onClick={completeSession}>Completar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session summary modal */}
+      {showSummary && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: '480px' }}>
+            <h3>Sesión completada</h3>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+              <span style={{ background: 'rgba(74,222,128,0.12)', color: 'var(--green)', padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: 700 }}>RPE {showSummary.rpe}</span>
+              {showSummary.duration && <span style={{ background: 'rgba(96,165,250,0.12)', color: 'var(--blue)', padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: 700 }}>{showSummary.duration} min</span>}
+            </div>
+            {getExData(showSummary.session)?.map((ex, exIdx) => {
+              const sid = showSummary.session.id
+              return (
+                <div key={exIdx} style={{ marginBottom: '10px', background: 'var(--bg3)', borderRadius: '8px', padding: '10px 12px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '6px' }}>{ex.name}</div>
+                  {ex.series.map((_, si) => {
+                    const r = getVal(sid, exIdx, si, 'reps') || '—'
+                    const w = getVal(sid, exIdx, si, 'weight') || '—'
+                    return (
+                      <div key={si} style={{ display: 'flex', gap: '10px', fontSize: '12px', color: 'var(--text2)', padding: '2px 0' }}>
+                        <span style={{ color: 'var(--green)', fontWeight: 700, minWidth: '22px' }}>S{si+1}</span>
+                        <span>{r} reps × {w} kg</span>
+                      </div>
+                    )
+                  })}
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '11px', borderTop: '1px solid var(--border)', paddingTop: '6px' }}>
+                    <span style={{ color: 'var(--amber)', fontWeight: 700 }}>Máx: {calcMax(sid, exIdx, ex.series)}{typeof calcMax(sid, exIdx, ex.series) === 'number' ? 'kg' : ''}</span>
+                    <span style={{ color: 'var(--blue)', fontWeight: 700 }}>Vol: {calcVolume(sid, exIdx, ex.series)}</span>
+                  </div>
+                </div>
+              )
+            })}
+            {showSummary.notes && <div style={{ fontSize: '12px', color: 'var(--text2)', fontStyle: 'italic', marginBottom: '12px' }}>"{showSummary.notes}"</div>}
+            <button className="btn primary" style={{ width: '100%' }} onClick={() => setShowSummary(null)}>Cerrar</button>
           </div>
         </div>
       )}
