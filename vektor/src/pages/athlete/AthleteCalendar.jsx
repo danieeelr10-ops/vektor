@@ -20,6 +20,7 @@ export default function AthleteCalendar() {
   const [rpe, setRpe] = useState(null)
   const [logForm, setLogForm] = useState({ duration: '', log_notes: '' })
   const [saving, setSaving] = useState(false)
+  const [showSummary, setShowSummary] = useState(null)
 
   const isPresencial = profile?.mode === 'presencial'
   const today = new Date().toISOString().split('T')[0]
@@ -51,7 +52,11 @@ export default function AthleteCalendar() {
     setSelectedSession(session)
     setRpe(null)
     setLogForm({ duration: '', log_notes: '' })
-    setExecution({})
+    // Restore saved execution data
+    try {
+      const saved = session.execution_data ? JSON.parse(session.execution_data) : {}
+      setExecution(saved)
+    } catch { setExecution({}) }
   }
 
   function getExData(session) {
@@ -64,6 +69,17 @@ export default function AthleteCalendar() {
 
   function getVal(exIdx, serieIdx, field) {
     return execution[`${selectedSession.id}-${exIdx}-${serieIdx}-${field}`] || ''
+  }
+
+  function isDone(exIdx, si) {
+    return !!execution[`${selectedSession?.id}-${exIdx}-${si}-done`]
+  }
+
+  async function checkSet(exIdx, si) {
+    const key = `${selectedSession.id}-${exIdx}-${si}-done`
+    const updated = { ...execution, [key]: true }
+    setExecution(updated)
+    await supabase.from('sessions').update({ execution_data: JSON.stringify(updated) }).eq('id', selectedSession.id)
   }
 
   function calcMax(exIdx, series) {
@@ -99,6 +115,7 @@ export default function AthleteCalendar() {
       return
     }
     setSaving(false)
+    setShowSummary({ session: selectedSession, rpe: rpe ? String(rpe) : '?', duration: logForm.duration, notes: logForm.log_notes })
     setSelectedSession(null)
     await fetchAll()
   }
@@ -139,34 +156,46 @@ export default function AthleteCalendar() {
                     <th style={{ padding: '8px', textAlign: 'center', fontSize: '9px', color: '#4ade80', fontWeight: 700, textTransform: 'uppercase', background: '#111' }}>Kg plan</th>
                     <th style={{ padding: '8px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase', background: '#111' }}>Reps real</th>
                     <th style={{ padding: '8px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase', background: '#111' }}>Kg real</th>
+                    {!selectedSession.completed && <th style={{ padding: '8px', textAlign: 'center', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase', background: '#111' }}>✓</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {ex.series?.map((serie, si) => (
-                    <tr key={si} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '8px', color: '#4ade80', fontWeight: 700 }}>S{si + 1}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', color: '#aaa' }}>{serie.reps || '—'}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', color: '#4ade80', fontWeight: 700 }}>{serie.weight ? `${serie.weight}kg` : '—'}</td>
-                      <td style={{ padding: '6px 4px', textAlign: 'center' }}>
-                        {selectedSession.completed
-                          ? <span style={{ color: '#60a5fa' }}>{getVal(exIdx, si, 'reps') || '—'}</span>
-                          : <input type="number" value={getVal(exIdx, si, 'reps')} onChange={e => updateExecution(exIdx, si, 'reps', e.target.value)} style={{ width: '56px', padding: '5px', textAlign: 'center', marginBottom: 0, fontSize: '12px' }} placeholder="0" />
-                        }
-                      </td>
-                      <td style={{ padding: '6px 4px', textAlign: 'center' }}>
-                        {selectedSession.completed
-                          ? <span style={{ color: '#60a5fa' }}>{getVal(exIdx, si, 'weight') || '—'}</span>
-                          : <input type="number" step="0.5" value={getVal(exIdx, si, 'weight')} onChange={e => updateExecution(exIdx, si, 'weight', e.target.value)} style={{ width: '64px', padding: '5px', textAlign: 'center', marginBottom: 0, fontSize: '12px' }} placeholder="0" />
-                        }
-                      </td>
-                    </tr>
-                  ))}
+                  {ex.series?.map((serie, si) => {
+                    const done = isDone(exIdx, si)
+                    return (
+                      <tr key={si} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: done ? 'rgba(74,222,128,0.04)' : 'transparent', transition: 'background .2s' }}>
+                        <td style={{ padding: '8px', color: '#4ade80', fontWeight: 700 }}>S{si + 1}</td>
+                        <td style={{ padding: '8px', textAlign: 'center', color: '#aaa' }}>{serie.reps || '—'}</td>
+                        <td style={{ padding: '8px', textAlign: 'center', color: '#4ade80', fontWeight: 700 }}>{serie.weight ? `${serie.weight}kg` : '—'}</td>
+                        <td style={{ padding: '6px 4px', textAlign: 'center' }}>
+                          {selectedSession.completed
+                            ? <span style={{ color: '#60a5fa' }}>{getVal(exIdx, si, 'reps') || '—'}</span>
+                            : <input type="number" value={getVal(exIdx, si, 'reps')} onChange={e => updateExecution(exIdx, si, 'reps', e.target.value)} style={{ width: '56px', padding: '5px', textAlign: 'center', marginBottom: 0, fontSize: '12px' }} placeholder="0" />
+                          }
+                        </td>
+                        <td style={{ padding: '6px 4px', textAlign: 'center' }}>
+                          {selectedSession.completed
+                            ? <span style={{ color: '#60a5fa' }}>{getVal(exIdx, si, 'weight') || '—'}</span>
+                            : <input type="number" step="0.5" value={getVal(exIdx, si, 'weight')} onChange={e => updateExecution(exIdx, si, 'weight', e.target.value)} style={{ width: '64px', padding: '5px', textAlign: 'center', marginBottom: 0, fontSize: '12px' }} placeholder="0" />
+                          }
+                        </td>
+                        {!selectedSession.completed && (
+                          <td style={{ textAlign: 'center', padding: '6px 8px' }}>
+                            {done
+                              ? <span style={{ color: '#4ade80', fontSize: '16px', fontWeight: 700 }}>✓</span>
+                              : <button onClick={() => checkSet(exIdx, si)} style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', cursor: 'pointer', color: '#555', fontFamily: 'inherit', fontSize: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>✓</button>
+                            }
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
                   <tr style={{ background: '#1a1a1a' }}>
                     <td colSpan={3} style={{ padding: '6px 8px', fontSize: '10px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Resultados</td>
                     <td style={{ padding: '6px 4px', textAlign: 'center' }}>
                       <span style={{ color: '#fbbf24', fontWeight: 700, fontSize: '11px' }}>{calcMax(exIdx, ex.series || []) ? `Máx: ${calcMax(exIdx, ex.series || [])}kg` : '—'}</span>
                     </td>
-                    <td style={{ padding: '6px 4px', textAlign: 'center' }}>
+                    <td colSpan={selectedSession.completed ? 1 : 2} style={{ padding: '6px 4px', textAlign: 'center' }}>
                       <span style={{ color: '#a78bfa', fontWeight: 700, fontSize: '11px' }}>{calcVolume(exIdx, ex.series || []) ? `Vol: ${calcVolume(exIdx, ex.series || [])}` : '—'}</span>
                     </td>
                   </tr>
@@ -211,6 +240,45 @@ export default function AthleteCalendar() {
             </div>
           </div>
         )}
+      </div>
+    )
+  }
+
+  // SESSION SUMMARY MODAL
+  if (showSummary) {
+    const exData = (() => { try { return showSummary.session.routines?.exercises_data ? JSON.parse(showSummary.session.routines.exercises_data) : null } catch { return null } })()
+    const sid = showSummary.session.id
+    return (
+      <div className="fade-in">
+        <div style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: '12px', padding: '16px', marginBottom: '14px', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', marginBottom: '6px' }}>🎉</div>
+          <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '10px' }}>Sesión completada</div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <span style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80', padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: 700 }}>RPE {showSummary.rpe}</span>
+            {showSummary.duration && <span style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa', padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: 700 }}>{showSummary.duration} min</span>}
+          </div>
+        </div>
+        {exData?.map((ex, exIdx) => (
+          <div key={exIdx} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', padding: '12px 14px', marginBottom: '10px' }}>
+            <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '8px' }}>{ex.name}</div>
+            {ex.series?.map((_, si) => {
+              const r = execution[`${sid}-${exIdx}-${si}-reps`] || '—'
+              const w = execution[`${sid}-${exIdx}-${si}-weight`] || '—'
+              return (
+                <div key={si} style={{ display: 'flex', gap: '10px', fontSize: '12px', color: '#aaa', padding: '3px 0' }}>
+                  <span style={{ color: '#4ade80', fontWeight: 700, minWidth: '24px' }}>S{si+1}</span>
+                  <span>{r} reps × {w} kg</span>
+                </div>
+              )
+            })}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px', fontSize: '11px', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '7px' }}>
+              {calcMax(exIdx, ex.series || []) && <span style={{ color: '#fbbf24', fontWeight: 700 }}>Máx: {calcMax(exIdx, ex.series || [])}kg</span>}
+              {calcVolume(exIdx, ex.series || []) && <span style={{ color: '#a78bfa', fontWeight: 700 }}>Vol: {calcVolume(exIdx, ex.series || [])}</span>}
+            </div>
+          </div>
+        ))}
+        {showSummary.notes && <div style={{ fontSize: '12px', color: '#aaa', fontStyle: 'italic', marginBottom: '12px' }}>"{showSummary.notes}"</div>}
+        <button className="btn primary" style={{ width: '100%', padding: '12px' }} onClick={() => setShowSummary(null)}>Cerrar</button>
       </div>
     )
   }
