@@ -254,6 +254,18 @@ label {
 .page { padding: 18px 20px; max-width: 580px; margin: 0 auto; }
 .page-wide { padding: 18px 20px; }
 
+.athletes-layout { display: flex; height: calc(100vh - 110px); }
+.athletes-list-col { width: 320px; flex-shrink: 0; overflow-y: auto; border-right: 1px solid rgba(255,255,255,0.07); padding-right: 16px; }
+.athletes-profile-col { flex: 1; overflow-y: auto; padding-left: 20px; }
+
+@media (max-width: 640px) {
+  .athletes-layout { display: block; height: auto; }
+  .athletes-list-col { width: 100%; border-right: none; padding-right: 0; }
+  .athletes-list-col.hide { display: none; }
+  .athletes-profile-col { padding-left: 0; }
+  .athletes-profile-col.hide { display: none; }
+}
+
 .exercise-row {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;

@@ -207,11 +207,11 @@ export default function Athletes() {
   )
 
   return (
-    <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 110px)' }}>
-      <div style={{ width: '320px', flexShrink: 0, overflowY: 'auto', borderRight: '1px solid rgba(255,255,255,0.07)', paddingRight: '16px' }}>
+    <div className="athletes-layout">
+      <div className={`athletes-list-col${selected ? ' hide' : ''}`}>
         {athleteList}
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', paddingLeft: '20px' }}>
+      <div className={`athletes-profile-col${!selected ? ' hide' : ''}`}>
         {selected
           ? <AthleteProfile athlete={selected} onBack={() => { setSelected(null); fetchAll() }} onUpdate={(updated) => setSelected({ ...selected, ...updated })} />
           : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#333', fontSize: '13px' }}>Selecciona un atleta</div>
