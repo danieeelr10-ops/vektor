@@ -145,9 +145,9 @@ export default function Athletes() {
               {payment.total > 0 && (
                 <div>
                   <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '99px', height: '5px' }}>
-                    <div style={{ background: payment.color, borderRadius: '99px', height: '5px', width: `${Math.max(0, (payment.remaining / payment.total) * 100)}%`, transition: 'width 0.3s' }} />
+                    <div style={{ background: payment.color, borderRadius: '99px', height: '5px', width: `${Math.min(100, ((payment.total - payment.remaining) / payment.total) * 100)}%`, transition: 'width 0.3s' }} />
                   </div>
-                  <div style={{ fontSize: '10px', color: '#555', marginTop: '3px', textAlign: 'right' }}>{payment.remaining}/{payment.total} sesiones</div>
+                  <div style={{ fontSize: '10px', color: '#555', marginTop: '3px', textAlign: 'right' }}>{payment.total - payment.remaining}/{payment.total} sesiones</div>
                 </div>
               )}
             </div>
