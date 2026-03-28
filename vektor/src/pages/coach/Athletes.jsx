@@ -111,15 +111,17 @@ export default function Athletes() {
                 <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', background: activity.dot, border: '2px solid #111' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px', flexWrap: 'wrap' }}>
                   <div style={{ fontWeight: 700, fontSize: '14px' }}>{a.name}</div>
                   <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', padding: '2px 6px', borderRadius: '4px', background: a.mode === 'presencial' ? 'rgba(167,139,250,0.15)' : 'rgba(96,165,250,0.15)', color: a.mode === 'presencial' ? '#a78bfa' : '#60a5fa' }}>
                     {a.mode === 'presencial' ? 'Presencial' : 'Online'}
                   </span>
                 </div>
-                <div style={{ fontSize: '12px', color: '#888' }}>
-                  {a.sport} · {total} sesiones · {done} completadas
-                  {lastSession ? ` · última: ${lastSession.date}` : ''}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '10px', color: '#666', background: 'rgba(255,255,255,0.05)', padding: '1px 7px', borderRadius: '4px' }}>{a.sport}</span>
+                  <span style={{ fontSize: '10px', color: '#888', background: 'rgba(255,255,255,0.05)', padding: '1px 7px', borderRadius: '4px' }}>{total} ses.</span>
+                  <span style={{ fontSize: '10px', color: '#4ade80', background: 'rgba(74,222,128,0.08)', padding: '1px 7px', borderRadius: '4px' }}>{done} ✓</span>
+                  {lastSession && <span style={{ fontSize: '10px', color: '#555', padding: '1px 0' }}>{lastSession.date}</span>}
                 </div>
               </div>
               <span style={{ color: '#555', fontSize: '18px', flexShrink: 0 }}>›</span>
