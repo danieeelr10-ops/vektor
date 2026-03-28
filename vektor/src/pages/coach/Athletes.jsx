@@ -128,25 +128,28 @@ export default function Athletes() {
             </div>
 
             {/* Payment row */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '11px', color: '#555' }}>Paquete:</span>
-                <span style={{ background: payment.bg, color: payment.color, padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>{payment.label}</span>
-                {payment.total > 0 && (
-                  <div style={{ display: 'flex', gap: '2px' }}>
-                    {Array.from({ length: payment.total }).map((_, i) => (
-                      <div key={i} style={{ width: '8px', height: '8px', borderRadius: '2px', background: i < payment.remaining ? payment.color : 'rgba(255,255,255,0.08)' }} />
-                    ))}
-                  </div>
-                )}
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: payment.total > 0 ? '6px' : '0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                  <span style={{ fontSize: '11px', color: '#555' }}>Paquete:</span>
+                  <span style={{ background: payment.bg, color: payment.color, padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>{payment.label}</span>
+                </div>
+                <button
+                  className="btn sm"
+                  onClick={e => { e.stopPropagation(); setPayAthlete(a); setShowPayModal(true) }}
+                  style={{ fontSize: '11px', padding: '4px 10px' }}
+                >
+                  + Pago
+                </button>
               </div>
-              <button
-                className="btn sm"
-                onClick={e => { e.stopPropagation(); setPayAthlete(a); setShowPayModal(true) }}
-                style={{ fontSize: '11px', padding: '4px 10px' }}
-              >
-                + Pago
-              </button>
+              {payment.total > 0 && (
+                <div>
+                  <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '99px', height: '5px' }}>
+                    <div style={{ background: payment.color, borderRadius: '99px', height: '5px', width: `${Math.max(0, (payment.remaining / payment.total) * 100)}%`, transition: 'width 0.3s' }} />
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#555', marginTop: '3px', textAlign: 'right' }}>{payment.remaining}/{payment.total} sesiones</div>
+                </div>
+              )}
             </div>
           </div>
         )
