@@ -62,6 +62,14 @@ export default function Athletes() {
     fetchAll()
   }
 
+  async function deleteAthlete(athlete) {
+    if (!confirm(`¿Eliminar a ${athlete.name}? Esta acción no se puede deshacer.`)) return
+    const { error } = await supabase.from('profiles').delete().eq('id', athlete.id)
+    if (error) { alert('Error al eliminar: ' + error.message); return }
+    if (selected?.id === athlete.id) setSelected(null)
+    fetchAll()
+  }
+
   async function savePayment() {
     if (!payForm.sessions_purchased || !payAthlete) return
     setLoading(true)
@@ -134,13 +142,23 @@ export default function Athletes() {
                   <span style={{ fontSize: '11px', color: '#555' }}>Paquete:</span>
                   <span style={{ background: payment.bg, color: payment.color, padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>{payment.label}</span>
                 </div>
-                <button
-                  className="btn sm"
-                  onClick={e => { e.stopPropagation(); setPayAthlete(a); setShowPayModal(true) }}
-                  style={{ fontSize: '11px', padding: '4px 10px' }}
-                >
-                  + Pago
-                </button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    className="btn sm"
+                    onClick={e => { e.stopPropagation(); setPayAthlete(a); setShowPayModal(true) }}
+                    style={{ fontSize: '11px', padding: '4px 10px' }}
+                  >
+                    + Pago
+                  </button>
+                  <button
+                    className="btn sm"
+                    onClick={e => { e.stopPropagation(); deleteAthlete(a) }}
+                    style={{ fontSize: '11px', padding: '4px 8px', color: '#f87171', borderColor: 'rgba(248,113,113,0.3)' }}
+                    title="Eliminar atleta"
+                  >
+                    🗑
+                  </button>
+                </div>
               </div>
               {payment.total > 0 && (
                 <div>
