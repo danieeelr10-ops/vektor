@@ -31,6 +31,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [editForm, setEditForm] = useState({ name: athlete.name, sport: athlete.sport, mode: athlete.mode || 'online' })
   const [editSaving, setEditSaving] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [expandedSessions, setExpandedSessions] = useState(new Set())
   const [showPayModal, setShowPayModal] = useState(false)
   const [payForm, setPayForm] = useState({ sessions_purchased: '', amount: '', note: '', date: new Date().toISOString().split('T')[0] })
   const [payLoading, setPayLoading] = useState(false)
@@ -361,72 +362,85 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           </div>
           {sessions.filter(s => s.completed).length === 0 && <div className="empty">Sin sesiones completadas aún.</div>}
           {sessions.filter(s => s.completed).map(s => {
+            const isExpanded = expandedSessions.has(s.id)
             const exData = (() => { try { return s.routines?.exercises_data ? JSON.parse(s.routines.exercises_data) : null } catch { return null } })()
             const execData = (() => { try { return s.execution_data ? JSON.parse(s.execution_data) : null } catch { return null } })()
             return (
-              <div key={s.id} style={{ background: '#111', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+              <div key={s.id} style={{ background: '#111', border: `1px solid ${isExpanded ? 'rgba(74,222,128,0.3)' : 'rgba(74,222,128,0.1)'}`, borderRadius: '12px', marginBottom: '8px', overflow: 'hidden', transition: 'border-color .15s' }}>
+                {/* Header — siempre visible, clic para expandir */}
+                <div
+                  onClick={() => setExpandedSessions(prev => { const n = new Set(prev); isExpanded ? n.delete(s.id) : n.add(s.id); return n })}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', cursor: 'pointer' }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', color: '#000', flexShrink: 0 }}>✓</div>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#f0f0f0' }}>{s.routines?.name || 'Sesión'}</div>
-                      <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{s.date}</div>
+                      <div style={{ fontWeight: 700, fontSize: '13px', color: '#f0f0f0' }}>{s.routines?.name || 'Sesión'}</div>
+                      <div style={{ fontSize: '11px', color: '#666', marginTop: '1px' }}>{s.date}</div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {s.rpe && <span style={{ background: '#1a1a1a', color: '#4ade80', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700 }}>RPE {s.rpe}</span>}
-                    {s.duration && <span style={{ background: '#1a1a1a', color: '#aaa', padding: '3px 8px', borderRadius: '6px', fontSize: '11px' }}>{s.duration} min</span>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {s.rpe && <span style={{ background: '#1a1a1a', color: '#4ade80', padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 700 }}>RPE {s.rpe}</span>}
+                    {s.duration && <span style={{ background: '#1a1a1a', color: '#aaa', padding: '2px 7px', borderRadius: '6px', fontSize: '10px' }}>{s.duration}min</span>}
+                    <span style={{ color: '#555', fontSize: '16px', marginLeft: '4px', transition: 'transform .2s', display: 'inline-block', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
                   </div>
                 </div>
 
-                {s.log_notes && (
-                  <div style={{ fontSize: '12px', color: '#aaa', fontStyle: 'italic', marginBottom: '10px', background: '#1a1a1a', padding: '8px 12px', borderRadius: '8px' }}>
-                    "{s.log_notes}"
+                {/* Detalle expandido */}
+                {isExpanded && (
+                  <div style={{ padding: '0 14px 14px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                    {s.log_notes && (
+                      <div style={{ fontSize: '12px', color: '#aaa', fontStyle: 'italic', margin: '12px 0', background: '#1a1a1a', padding: '8px 12px', borderRadius: '8px' }}>
+                        "{s.log_notes}"
+                      </div>
+                    )}
+                    {exData && exData.length > 0
+                      ? exData.map((ex, exIdx) => {
+                          if (!ex.series?.length) return null
+                          return (
+                            <div key={exIdx} style={{ marginTop: '12px' }}>
+                              <div style={{ fontWeight: 600, fontSize: '12px', color: '#f0f0f0', marginBottom: '6px' }}>{ex.name}</div>
+                              <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', fontSize: '11px' }}>
+                                  <thead>
+                                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                                      <th style={{ padding: '5px 8px', textAlign: 'left', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Serie</th>
+                                      <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Plan</th>
+                                      <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Real</th>
+                                      <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Kg plan</th>
+                                      <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Kg real</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {ex.series.map((serie, si) => {
+                                      const rKey = `${s.id}-${exIdx}-${si}-reps`
+                                      const wKey = `${s.id}-${exIdx}-${si}-weight`
+                                      const realReps = execData?.[rKey]
+                                      const realWeight = execData?.[wKey]
+                                      const exceeded = realWeight && serie.weight && parseFloat(realWeight) > parseFloat(serie.weight)
+                                      return (
+                                        <tr key={si} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                          <td style={{ padding: '6px 8px', color: '#4ade80', fontWeight: 700 }}>S{si+1}</td>
+                                          <td style={{ padding: '6px 8px', textAlign: 'center', color: '#555' }}>{serie.reps || '—'}</td>
+                                          <td style={{ padding: '6px 8px', textAlign: 'center', color: realReps ? '#60a5fa' : '#333', fontWeight: 600 }}>{realReps || '—'}</td>
+                                          <td style={{ padding: '6px 8px', textAlign: 'center', color: '#555' }}>{serie.weight ? `${serie.weight}kg` : '—'}</td>
+                                          <td style={{ padding: '6px 8px', textAlign: 'center', color: exceeded ? '#4ade80' : realWeight ? '#60a5fa' : '#333', fontWeight: 600 }}>
+                                            {realWeight ? `${realWeight}kg` : '—'}
+                                            {exceeded && <span style={{ fontSize: '9px', marginLeft: '3px' }}>↑</span>}
+                                          </td>
+                                        </tr>
+                                      )
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )
+                        })
+                      : <div style={{ fontSize: '12px', color: '#555', marginTop: '12px' }}>Sin detalle de ejercicios registrado.</div>
+                    }
                   </div>
                 )}
-
-                {exData && exData.map((ex, exIdx) => {
-                  if (!ex.series?.length) return null
-                  return (
-                    <div key={exIdx} style={{ marginBottom: '10px' }}>
-                      <div style={{ fontWeight: 600, fontSize: '12px', color: '#f0f0f0', marginBottom: '6px' }}>{ex.name}</div>
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', fontSize: '11px' }}>
-                          <thead>
-                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                              <th style={{ padding: '5px 8px', textAlign: 'left', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Serie</th>
-                              <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Plan</th>
-                              <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Real</th>
-                              <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#555', fontWeight: 700, textTransform: 'uppercase' }}>Kg plan</th>
-                              <th style={{ padding: '5px 8px', textAlign: 'center', fontSize: '9px', color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase' }}>Kg real</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {ex.series.map((serie, si) => {
-                              const rKey = `${s.id}-${exIdx}-${si}-reps`
-                              const wKey = `${s.id}-${exIdx}-${si}-weight`
-                              const realReps = execData?.[rKey]
-                              const realWeight = execData?.[wKey]
-                              const exceeded = realWeight && serie.weight && parseFloat(realWeight) > parseFloat(serie.weight)
-                              return (
-                                <tr key={si} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                  <td style={{ padding: '6px 8px', color: '#4ade80', fontWeight: 700 }}>S{si+1}</td>
-                                  <td style={{ padding: '6px 8px', textAlign: 'center', color: '#555' }}>{serie.reps || '—'}</td>
-                                  <td style={{ padding: '6px 8px', textAlign: 'center', color: realReps ? '#60a5fa' : '#333', fontWeight: 600 }}>{realReps || '—'}</td>
-                                  <td style={{ padding: '6px 8px', textAlign: 'center', color: '#555' }}>{serie.weight ? `${serie.weight}kg` : '—'}</td>
-                                  <td style={{ padding: '6px 8px', textAlign: 'center', color: exceeded ? '#4ade80' : realWeight ? '#60a5fa' : '#333', fontWeight: 600 }}>
-                                    {realWeight ? `${realWeight}kg` : '—'}
-                                    {exceeded && <span style={{ fontSize: '9px', marginLeft: '3px' }}>↑</span>}
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )
-                })}
               </div>
             )
           })}
