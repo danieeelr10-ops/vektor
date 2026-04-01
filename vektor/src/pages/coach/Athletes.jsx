@@ -256,16 +256,11 @@ export default function Athletes() {
   )
 
   return (
-    <div className="athletes-layout">
-      <div className={`athletes-list-col${selected ? ' hide' : ''}`}>
-        {athleteList}
-      </div>
-      <div className={`athletes-profile-col${!selected ? ' hide' : ''}`}>
-        {selected
-          ? <AthleteProfile athlete={selected} onBack={() => { setSelected(null); fetchAll() }} onUpdate={(updated) => setSelected({ ...selected, ...updated })} />
-          : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#333', fontSize: '13px' }}>Selecciona un atleta</div>
-        }
-      </div>
+    <div style={{ height: '100%' }}>
+      {selected
+        ? <AthleteProfile athlete={selected} onBack={() => { setSelected(null); fetchAll() }} onUpdate={(updated) => setSelected({ ...selected, ...updated })} />
+        : athleteList
+      }
     </div>
   )
 }
