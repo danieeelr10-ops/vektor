@@ -33,6 +33,7 @@ export default function Athletes() {
   const [payForm, setPayForm] = useState({ sessions_purchased: '', amount: '', note: '' })
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
+  const [modeFilter, setModeFilter] = useState('online')
   const sports = ['Fútbol', 'Atletismo', 'Natación', 'Baloncesto', 'Ciclismo', 'Tenis', 'Gym', 'Otro']
 
   useEffect(() => { fetchAll() }, [])
@@ -99,14 +100,28 @@ export default function Athletes() {
 
   const athleteList = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-        <span className="stitle">Mis atletas ({athletes.length})</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <span className="stitle">Mis atletas</span>
         <button className="btn primary sm" onClick={() => setShowModal(true)}>+ Atleta</button>
       </div>
 
-      {!athletes.length && <div className="empty">Aún no tienes atletas registrados.</div>}
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
+        {['online', 'presencial'].map(m => (
+          <button
+            key={m}
+            onClick={() => setModeFilter(m)}
+            style={{ flex: 1, padding: '6px 0', borderRadius: '8px', border: `1px solid ${modeFilter === m ? (m === 'presencial' ? '#a78bfa' : '#60a5fa') : 'rgba(255,255,255,0.08)'}`, background: modeFilter === m ? (m === 'presencial' ? 'rgba(167,139,250,0.12)' : 'rgba(96,165,250,0.12)') : 'transparent', color: modeFilter === m ? (m === 'presencial' ? '#a78bfa' : '#60a5fa') : '#555', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', cursor: 'pointer', transition: 'all .15s' }}
+          >
+            {m === 'presencial' ? 'Presencial' : 'Online'} ({athletes.filter(a => (a.mode || 'online') === m).length})
+          </button>
+        ))}
+      </div>
 
-      {athletes.map(a => {
+      {athletes.filter(a => (a.mode || 'online') === modeFilter).length === 0 && (
+        <div className="empty">Sin atletas {modeFilter === 'presencial' ? 'presenciales' : 'online'}.</div>
+      )}
+
+      {athletes.filter(a => (a.mode || 'online') === modeFilter).map(a => {
         const total = sessions.filter(s => s.athlete_id === a.id).length
         const done = sessions.filter(s => s.athlete_id === a.id && s.completed).length
         const lastSession = sessions.filter(s => s.athlete_id === a.id)[0]
