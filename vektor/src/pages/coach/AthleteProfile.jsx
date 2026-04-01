@@ -174,12 +174,27 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   async function assignSession() {
     if (!assignForm.routine_id || !selectedDate) return
     setSaving(true)
+    const scheduledTime = (assignForm.start_time && assignForm.end_time) ? `${assignForm.start_time} - ${assignForm.end_time}` : assignForm.start_time || null
+    const routine = routines.find(r => r.id === assignForm.routine_id)
     await supabase.from('sessions').insert({
       coach_id: user.id, athlete_id: athlete.id,
       routine_id: assignForm.routine_id, date: selectedDate,
       notes: assignForm.notes, completed: false,
-      scheduled_time: (assignForm.start_time && assignForm.end_time) ? `${assignForm.start_time} - ${assignForm.end_time}` : assignForm.start_time || null
+      scheduled_time: scheduledTime
     })
+    // Enviar notificación por email
+    if (athleteData.email) {
+      supabase.functions.invoke('notify-session', {
+        body: {
+          athlete_email: athleteData.email,
+          athlete_name: athleteData.name,
+          date: selectedDate,
+          scheduled_time: scheduledTime,
+          routine_name: routine?.name || null,
+          notes: assignForm.notes || null
+        }
+      })
+    }
     setSaving(false); setShowAssign(false); fetchAll()
   }
 
