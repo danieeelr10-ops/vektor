@@ -312,10 +312,10 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
       )}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', background: '#1a1a1a', borderRadius: '10px', padding: '3px', gap: '2px', marginBottom: '16px', overflowX: 'auto' }}>
+      <div style={{ display: 'flex', background: '#1a1a1a', borderRadius: '10px', padding: '3px', gap: '2px', marginBottom: '16px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
-            flex: 1, padding: '8px 4px', border: tab===t.id ? '1px solid rgba(74,222,128,0.3)' : 'none',
+            flexShrink: 0, padding: '8px 10px', border: tab===t.id ? '1px solid rgba(74,222,128,0.3)' : 'none',
             background: tab===t.id ? '#222' : 'transparent',
             color: tab===t.id ? '#4ade80' : '#888',
             fontFamily: 'inherit', fontSize: '11px', fontWeight: 600,

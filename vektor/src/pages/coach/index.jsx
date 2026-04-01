@@ -51,13 +51,13 @@ export default function CoachDashboard() {
           <button onClick={() => setAthleteMode(true)} style={{ display:'flex', alignItems:'center', gap:'5px', background:'rgba(74,222,128,0.08)', border:'1px solid rgba(74,222,128,0.2)', borderRadius:'8px', padding:'5px 10px', color:'#4ade80', fontSize:'11px', fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
             🏋️ Mi entreno
           </button>
-          <span style={{ fontSize:'12px', color:'var(--text2)' }}>{profile?.name}</span>
+          <span className="topbar-name" style={{ fontSize:'12px', color:'var(--text2)' }}>{profile?.name}</span>
           <button className="btn sm ghost" onClick={signOut}>Salir</button>
         </div>
       </div>
-      <div style={{ display:'flex', background:'var(--bg2)', borderBottom:'1px solid var(--border)', padding:'0 20px', gap:'2px', overflowX:'auto' }}>
+      <div className="nav-tabs" style={{ display:'flex', background:'var(--bg2)', borderBottom:'1px solid var(--border)', padding:'0 20px', gap:'2px', overflowX:'auto' }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
+          <button key={t.id} onClick={() => setTab(t.id)} className="nav-tab-btn" style={{
             padding:'12px 14px', border:'none', background:'transparent',
             color: tab===t.id ? 'var(--green)' : 'var(--text2)',
             fontFamily:'var(--font)', fontSize:'12px', fontWeight:600,

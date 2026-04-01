@@ -29,13 +29,13 @@ export default function AthleteDashboard({ coachAsAthlete = false }) {
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text2)' }}>{profile?.name}</span>
+          <span className="topbar-name" style={{ fontSize: '12px', color: 'var(--text2)' }}>{profile?.name}</span>
           <button className="btn sm ghost" onClick={signOut}>Salir</button>
         </div>
       </div>
-      <div style={{ display: 'flex', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', padding: '0 20px', gap: '2px', overflowX: 'auto' }}>
+      <div className="nav-tabs" style={{ display: 'flex', background: 'var(--bg2)', borderBottom: '1px solid var(--border)', padding: '0 20px', gap: '2px', overflowX: 'auto' }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
+          <button key={t.id} onClick={() => setTab(t.id)} className="nav-tab-btn" style={{
             padding: '12px 14px', border: 'none', background: 'transparent',
             color: tab === t.id ? 'var(--green)' : 'var(--text2)',
             fontFamily: 'var(--font)', fontSize: '12px', fontWeight: 600,

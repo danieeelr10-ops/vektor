@@ -266,6 +266,39 @@ label {
   .athletes-profile-col.hide { display: none; }
 }
 
+/* ── Mobile ── */
+.topbar-name { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 480px) {
+  .page { padding: 14px 12px; }
+  .page-wide { padding: 14px 12px; }
+
+  .topbar { padding: 10px 12px; gap: 6px; }
+  .logo { font-size: 13px; gap: 7px; }
+  .logo-mark { width: 26px; height: 26px; font-size: 13px; border-radius: 6px; }
+  .topbar-name { max-width: 80px; font-size: 11px; }
+
+  .g3 { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .metric .val { font-size: 18px; }
+  .metric { padding: 10px 8px; }
+
+  .modal-overlay { padding: 10px; }
+  .modal { padding: 18px 14px; }
+
+  .cal-day { min-height: 44px; padding: 4px 2px; border-radius: 6px; }
+  .cal-day-hdr { font-size: 9px; }
+
+  .tabs { margin-bottom: 14px; }
+  .tab-btn { font-size: 11px; padding: 7px 3px; }
+
+  .btn.sm { padding: 5px 10px; font-size: 11px; }
+  .nav-tabs { padding: 0 10px !important; }
+  .nav-tab-btn { padding: 10px 10px !important; font-size: 11px !important; }
+
+  .card { padding: 14px 14px; }
+  .stitle { margin-bottom: 8px; }
+}
+
 .exercise-row {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
