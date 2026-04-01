@@ -13,6 +13,7 @@ export default function AthleteCalendar() {
   const { user, profile } = useAuth()
   const [sessions, setSessions] = useState([])
   const [payments, setPayments] = useState([])
+  const [cycles, setCycles] = useState([])
   const [monthDate, setMonthDate] = useState(new Date())
   const [selectedSession, setSelectedSession] = useState(null)
   const [showDayModal, setShowDayModal] = useState(null)
@@ -33,12 +34,14 @@ export default function AthleteCalendar() {
   useEffect(() => { fetchAll() }, [])
 
   async function fetchAll() {
-    const [{ data: s }, { data: p }] = await Promise.all([
+    const [{ data: s }, { data: p }, { data: cy }] = await Promise.all([
       supabase.from('sessions').select('*, routines(name, description, exercises_data)').eq('athlete_id', user.id).order('date', { ascending: false }),
-      supabase.from('payments').select('*').eq('athlete_id', user.id).order('date', { ascending: false })
+      supabase.from('payments').select('*').eq('athlete_id', user.id).order('date', { ascending: false }),
+      supabase.from('cycles').select('*').eq('athlete_id', user.id).order('start_date', { ascending: false })
     ])
     setSessions(s || [])
     setPayments(p || [])
+    setCycles(cy || [])
   }
 
   const lastPayment = payments[0]
@@ -46,6 +49,10 @@ export default function AthleteCalendar() {
 
   function sessionsForDate(dateStr) {
     return sessions.filter(s => s.date === dateStr)
+  }
+
+  function dateInCycle(dateStr) {
+    return cycles.find(c => dateStr >= c.start_date && dateStr <= c.end_date)
   }
 
   function openSession(session) {
@@ -362,6 +369,9 @@ export default function AthleteCalendar() {
           const ss = dateStr ? sessionsForDate(dateStr) : []
           const hasCompleted = ss.some(s => s.completed)
           const hasPending = ss.some(s => !s.completed)
+          const cycle = dateStr ? dateInCycle(dateStr) : null
+          const isCycleStart = cycle && dateStr === cycle.start_date
+          const isCycleEnd = cycle && dateStr === cycle.end_date
           return (
             <div key={i}
               onClick={() => {
@@ -370,8 +380,8 @@ export default function AthleteCalendar() {
                 else openSession(ss[0])
               }}
               style={{
-                background: !valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.08)' : isToday ? 'rgba(74,222,128,0.04)' : '#111',
-                border: `1px solid ${!valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.35)' : hasPending ? 'rgba(167,139,250,0.25)' : isToday ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`,
+                background: !valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.08)' : cycle ? 'rgba(167,139,250,0.07)' : isToday ? 'rgba(74,222,128,0.04)' : '#111',
+                border: `1px solid ${!valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.35)' : hasPending ? 'rgba(251,191,36,0.25)' : cycle ? 'rgba(167,139,250,0.3)' : isToday ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`,
                 borderRadius: '8px', padding: '5px 3px', minHeight: '52px',
                 cursor: valid && ss.length ? 'pointer' : 'default'
               }}
@@ -379,16 +389,23 @@ export default function AthleteCalendar() {
               {valid && (
                 <>
                   <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: isToday ? 700 : 400, color: isToday ? '#4ade80' : '#f0f0f0' }}>{dayNum}</div>
+                  {isCycleStart && <div style={{ textAlign: 'center', fontSize: '7px', fontWeight: 700, color: '#4ade80', marginTop: '2px' }}>▶ Inicio</div>}
+                  {isCycleEnd && <div style={{ textAlign: 'center', fontSize: '7px', fontWeight: 700, color: '#f87171', marginTop: '2px' }}>■ Fin</div>}
                   {hasCompleted && (
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
                       <div style={{ width: '18px', height: '18px', borderRadius: '5px', background: '#4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#000' }}>✓</div>
                     </div>
                   )}
-                  {!hasCompleted && hasPending && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
-                      <div style={{ width: '18px', height: '18px', borderRadius: '5px', background: isPresencial ? 'rgba(167,139,250,0.15)' : 'rgba(251,191,36,0.12)', border: `1px solid ${isPresencial ? 'rgba(167,139,250,0.4)' : 'rgba(251,191,36,0.4)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: isPresencial ? '#a78bfa' : '#fbbf24' }}>•</div>
-                    </div>
-                  )}
+                  {!hasCompleted && hasPending && (() => {
+                    const pending = ss.find(s => !s.completed)
+                    const time = pending?.scheduled_time
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '3px', gap: '2px' }}>
+                        <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #fbbf24', background: 'transparent' }} />
+                        {time && <div style={{ fontSize: '8px', color: '#fbbf24', fontWeight: 700, textAlign: 'center' }}>{time.split(' - ')[0]}</div>}
+                      </div>
+                    )
+                  })()}
                 </>
               )}
             </div>
@@ -397,9 +414,10 @@ export default function AthleteCalendar() {
       </div>
 
       {/* Legend */}
-      <div style={{ display: 'flex', gap: '14px', fontSize: '10px', color: '#888', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', gap: '14px', fontSize: '10px', color: '#888', marginBottom: '16px', flexWrap: 'wrap' }}>
         <span><span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', background: '#4ade80', marginRight: '4px', verticalAlign: 'middle', fontSize: '8px', fontWeight: 700, color: '#000', textAlign: 'center', lineHeight: '12px' }}>✓</span>Completada</span>
-        <span><span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', background: isPresencial ? 'rgba(167,139,250,0.15)' : 'rgba(251,191,36,0.12)', marginRight: '4px', verticalAlign: 'middle' }}></span>Pendiente</span>
+        <span><span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', border: '2px solid #fbbf24', marginRight: '4px', verticalAlign: 'middle' }}></span>Pendiente</span>
+        <span><span style={{ display: 'inline-block', width: '14px', height: '4px', borderRadius: '2px', background: '#a78bfa', marginRight: '4px', verticalAlign: 'middle' }}></span>Ciclo</span>
       </div>
 
       {/* Online: upcoming list */}
