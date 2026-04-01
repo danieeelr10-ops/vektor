@@ -4,6 +4,26 @@ import { useAuth } from '../../hooks/useAuth'
 import AthleteDashboard from './AthleteDashboard'
 import Routines from './Routines'
 
+const TIME_OPTIONS = ['', ...Array.from({length: 34}, (_, i) => {
+  const totalMins = 5 * 60 + i * 30
+  const h = Math.floor(totalMins / 60)
+  const m = totalMins % 60
+  const ampm = h < 12 ? 'am' : 'pm'
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return { value: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, label: `${h12}:${String(m).padStart(2,'0')} ${ampm}` }
+})]
+
+function TimeSelect({ value, onChange, placeholder = 'Hora' }) {
+  return (
+    <select value={value} onChange={e => onChange(e.target.value)} style={{ flex: 1 }}>
+      <option value="">{placeholder}</option>
+      {TIME_OPTIONS.filter(t => t).map(t => (
+        <option key={t.value} value={t.value}>{t.label}</option>
+      ))}
+    </select>
+  )
+}
+
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DAYS = ['L','M','M','J','V','S','D']
 
@@ -26,8 +46,8 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [showAssign, setShowAssign] = useState(false)
   const [showDayDetail, setShowDayDetail] = useState(null)
   const [showPresencial, setShowPresencial] = useState(false)
-  const [assignForm, setAssignForm] = useState({ routine_id: '', notes: '' })
-  const [presencialForm, setPresencialForm] = useState({ note: '', completed: false })
+  const [assignForm, setAssignForm] = useState({ routine_id: '', notes: '', start_time: '', end_time: '' })
+  const [presencialForm, setPresencialForm] = useState({ note: '', completed: false, start_time: '', end_time: '' })
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState({ name: athlete.name, sport: athlete.sport, mode: athlete.mode || 'online' })
   const [editSaving, setEditSaving] = useState(false)
@@ -157,7 +177,8 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     await supabase.from('sessions').insert({
       coach_id: user.id, athlete_id: athlete.id,
       routine_id: assignForm.routine_id, date: selectedDate,
-      notes: assignForm.notes, completed: false
+      notes: assignForm.notes, completed: false,
+      scheduled_time: (assignForm.start_time && assignForm.end_time) ? `${assignForm.start_time} - ${assignForm.end_time}` : assignForm.start_time || null
     })
     setSaving(false); setShowAssign(false); fetchAll()
   }
@@ -168,7 +189,8 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     const existing = sessions.find(s => s.date === selectedDate)
     if (existing) {
       const wasCompleted = existing.completed
-      await supabase.from('sessions').update({ notes: presencialForm.note, completed: presencialForm.completed }).eq('id', existing.id)
+      const scheduledTime = (presencialForm.start_time && presencialForm.end_time) ? `${presencialForm.start_time} - ${presencialForm.end_time}` : presencialForm.start_time || null
+      await supabase.from('sessions').update({ notes: presencialForm.note, completed: presencialForm.completed, scheduled_time: scheduledTime }).eq('id', existing.id)
       // Auto-discount from package if newly completed
       if (!wasCompleted && presencialForm.completed && lastPayment && sessionsRemaining > 0) {
         await supabase.from('payments').update({ sessions_used: lastPayment.sessions_used + 1 }).eq('id', lastPayment.id)
@@ -177,7 +199,8 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
       await supabase.from('sessions').insert({
         coach_id: user.id, athlete_id: athlete.id,
         routine_id: null, date: selectedDate,
-        notes: presencialForm.note, completed: presencialForm.completed
+        notes: presencialForm.note, completed: presencialForm.completed,
+        scheduled_time: (presencialForm.start_time && presencialForm.end_time) ? `${presencialForm.start_time} - ${presencialForm.end_time}` : presencialForm.start_time || null
       })
       if (presencialForm.completed && lastPayment && sessionsRemaining > 0) {
         await supabase.from('payments').update({ sessions_used: lastPayment.sessions_used + 1 }).eq('id', lastPayment.id)
@@ -353,11 +376,16 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                           <div style={{ width: '18px', height: '18px', borderRadius: '5px', background: '#4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#000' }}>✓</div>
                         </div>
                       )}
-                      {!hasCompleted && hasPending && (
-                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
-                          <div style={{ width: '18px', height: '18px', borderRadius: '5px', background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: '#fbbf24' }}>•••</div>
-                        </div>
-                      )}
+                      {!hasCompleted && hasPending && (() => {
+                        const pending = ss.find(s => !s.completed)
+                        const time = pending?.scheduled_time
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '3px', gap: '2px' }}>
+                            <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid #fbbf24', background: 'transparent' }} />
+                            {time && <div style={{ fontSize: '8px', color: '#fbbf24', fontWeight: 700, textAlign: 'center', lineHeight: 1.2 }}>{time.split(' - ')[0]}</div>}
+                          </div>
+                        )
+                      })()}
                     </>
                   )}
                 </div>
@@ -366,10 +394,11 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           </div>
           <div style={{ display: 'flex', gap: '12px', marginTop: '10px', fontSize: '10px', color: '#888', flexWrap: 'wrap' }}>
             <span><span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', marginRight: '4px' }}></span>Completada</span>
-            {isOnline && <span><span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#fbbf24', marginRight: '4px' }}></span>Pendiente</span>}
+            <span><span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#fbbf24', marginRight: '4px' }}></span>Pendiente</span>
             <span><span style={{ display: 'inline-block', width: '14px', height: '4px', borderRadius: '2px', background: '#a78bfa', marginRight: '4px', verticalAlign: 'middle' }}></span>Ciclo</span>
           </div>
           <div style={{ marginTop: '10px', fontSize: '11px', color: '#555', textAlign: 'center' }}>Click en un día para asignar o ver sesiones</div>
+
         </div>
       )}
 
@@ -472,7 +501,10 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                 <div key={s.id} style={{ background: '#111', border: '1px solid rgba(251,191,36,0.15)', borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '13px', color: '#f0f0f0' }}>{s.routines?.name || 'Sesión'}</div>
-                    <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{s.date}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                      <span style={{ fontSize: '11px', color: '#888' }}>{s.date}</span>
+                      {s.scheduled_time && <span style={{ fontSize: '11px', color: '#a78bfa', fontWeight: 600 }}>🕐 {s.scheduled_time}</span>}
+                    </div>
                     {s.notes && <div style={{ fontSize: '11px', color: '#555', marginTop: '3px' }}>"{s.notes}"</div>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -752,6 +784,13 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
             <div className="field"><label>Fecha</label>
               <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
             </div>
+            <div className="field"><label>Horario (opcional)</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TimeSelect value={assignForm.start_time} onChange={v => setAssignForm({...assignForm, start_time: v})} placeholder="Inicio" />
+                <span style={{ color: '#555', fontSize: '12px' }}>a</span>
+                <TimeSelect value={assignForm.end_time} onChange={v => setAssignForm({...assignForm, end_time: v})} placeholder="Fin" />
+              </div>
+            </div>
             <div className="field"><label>Notas para el atleta</label>
               <textarea rows={2} value={assignForm.notes} onChange={e => setAssignForm({...assignForm, notes: e.target.value})} placeholder="Indicaciones especiales..." />
             </div>
@@ -792,6 +831,13 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
         <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowPresencial(false)}>
           <div className="modal">
             <h3>Sesión presencial — {selectedDate}</h3>
+            <div className="field"><label>Horario (opcional)</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TimeSelect value={presencialForm.start_time} onChange={v => setPresencialForm({...presencialForm, start_time: v})} placeholder="Inicio" />
+                <span style={{ color: '#555', fontSize: '12px' }}>a</span>
+                <TimeSelect value={presencialForm.end_time} onChange={v => setPresencialForm({...presencialForm, end_time: v})} placeholder="Fin" />
+              </div>
+            </div>
             <div className="field">
               <label>Notas de la sesión</label>
               <textarea rows={4} value={presencialForm.note} onChange={e => setPresencialForm({...presencialForm, note: e.target.value})} placeholder="Ejercicios realizados, observaciones, rendimiento del atleta..." />
