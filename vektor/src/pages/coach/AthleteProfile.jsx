@@ -685,9 +685,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                       ))}
                     </div>
                   )}
-                  {!s.completed && (
-                    <button className="btn danger sm" style={{ marginTop: '8px', fontSize: '10px' }} onClick={async () => { if(!confirm('¿Eliminar?')) return; await supabase.from('sessions').delete().eq('id', s.id); setShowDayDetail(null); fetchAll() }}>Eliminar sesión</button>
-                  )}
+                  <button className="btn danger sm" style={{ marginTop: '8px', fontSize: '10px' }} onClick={async () => { if(!confirm('¿Eliminar esta sesión?')) return; await supabase.from('sessions').delete().eq('id', s.id); setShowDayDetail(null); fetchAll() }}>Eliminar sesión</button>
                 </div>
               )
             })}
