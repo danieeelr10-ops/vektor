@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import AthleteDashboard from '../athlete/index'
 import Athletes from './Athletes'
-import Routines from './Routines'
 import CoachAgenda from './Agenda'
 import CSVImporter from './CSVImporter'
 import Invitations from './Invitations'
@@ -10,7 +9,6 @@ import CoachMetrics from './Metrics'
 
 const TABS = [
   { id:'athletes', label:'Atletas' },
-  { id:'routines', label:'Rutinas' },
   { id:'agenda', label:'Agenda' },
   { id:'metrics', label:'Métricas' },
   { id:'import', label:'Importar' },
@@ -70,7 +68,6 @@ export default function CoachDashboard() {
       </div>
       <div className={tab === 'athletes' ? 'page-wide' : 'page'}>
         {tab==='athletes' && <Athletes />}
-        {tab==='routines' && <Routines />}
         {tab==='agenda' && <CoachAgenda />}
         {tab==='metrics' && <CoachMetrics />}
         {tab==='import' && <CSVImporter />}
