@@ -38,6 +38,9 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [payLoading, setPayLoading] = useState(false)
   const [editingPayment, setEditingPayment] = useState(null)
   const [editPayForm, setEditPayForm] = useState({ sessions_purchased: '', sessions_used: '', amount: '', note: '', date: '' })
+  const [cycles, setCycles] = useState([])
+  const [showCycleModal, setShowCycleModal] = useState(false)
+  const [cycleForm, setCycleForm] = useState({ label: 'Ciclo 1', start_date: '', end_date: '' })
   const today = new Date().toISOString().split('T')[0]
   const year = monthDate.getFullYear()
   const month = monthDate.getMonth()
@@ -59,13 +62,14 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   useEffect(() => { fetchAll() }, [athlete.id])
 
   async function fetchAll() {
-    const [{ data: s }, { data: m }, { data: r }, { data: ro }, { data: allR }, { data: p }] = await Promise.all([
+    const [{ data: s }, { data: m }, { data: r }, { data: ro }, { data: allR }, { data: p }, { data: cy }] = await Promise.all([
       supabase.from('sessions').select('*, routines(name,exercises_data)').eq('athlete_id', athlete.id).order('date', { ascending: false }),
       supabase.from('metrics').select('*').eq('user_id', athlete.id).order('date', { ascending: false }),
       supabase.from('rm_records').select('*').eq('user_id', athlete.id).order('date', { ascending: false }),
       supabase.from('routines').select('id,name').eq('coach_id', user.id).order('name'),
       supabase.from('routines').select('*').eq('coach_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('payments').select('*').eq('athlete_id', athlete.id).order('date', { ascending: false })
+      supabase.from('payments').select('*').eq('athlete_id', athlete.id).order('date', { ascending: false }),
+      supabase.from('cycles').select('*').eq('athlete_id', athlete.id).order('start_date', { ascending: false })
     ])
     setSessions(s || [])
     setMetrics(m || [])
@@ -73,6 +77,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     setRoutines(ro || [])
     setAllRoutines(allR || [])
     setPayments(p || [])
+    setCycles(cy || [])
     if (ro?.length) setAssignForm(f => ({ ...f, routine_id: ro[0].id }))
   }
 
@@ -181,6 +186,24 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     setSaving(false); setShowPresencial(false); fetchAll()
   }
 
+  async function saveCycle() {
+    if (!cycleForm.start_date || !cycleForm.end_date) return
+    await supabase.from('cycles').insert({ coach_id: user.id, athlete_id: athlete.id, label: cycleForm.label || 'Ciclo', start_date: cycleForm.start_date, end_date: cycleForm.end_date })
+    setShowCycleModal(false)
+    setCycleForm({ label: 'Ciclo 1', start_date: '', end_date: '' })
+    fetchAll()
+  }
+
+  async function deleteCycle(id) {
+    if (!confirm('¿Eliminar este ciclo?')) return
+    await supabase.from('cycles').delete().eq('id', id)
+    fetchAll()
+  }
+
+  function dateInCycle(dateStr) {
+    return cycles.find(c => dateStr >= c.start_date && dateStr <= c.end_date)
+  }
+
   async function saveEdit() {
     setEditSaving(true)
     await supabase.from('profiles').update({ name: editForm.name, sport: editForm.sport, mode: editForm.mode }).eq('id', athlete.id)
@@ -272,8 +295,26 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <button className="btn sm" onClick={() => setMonthDate(new Date(year,month-1,1))}>← Ant.</button>
             <span style={{ fontWeight: 700, fontSize: '14px', color: '#f0f0f0' }}>{MONTHS[month]} {year}</span>
-            <button className="btn sm" onClick={() => setMonthDate(new Date(year,month+1,1))}>Sig. →</button>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button className="btn sm" style={{ fontSize: '10px', color: '#a78bfa', borderColor: 'rgba(167,139,250,0.3)' }} onClick={() => setShowCycleModal(true)}>+ Ciclo</button>
+              <button className="btn sm" onClick={() => setMonthDate(new Date(year,month+1,1))}>Sig. →</button>
+            </div>
           </div>
+
+          {/* Ciclos activos */}
+          {cycles.length > 0 && (
+            <div style={{ marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {cycles.map(c => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.25)', borderRadius: '8px', padding: '6px 10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '10px', color: '#a78bfa', fontWeight: 700 }}>▶ {c.label}</span>
+                    <span style={{ fontSize: '10px', color: '#777' }}>{c.start_date} → {c.end_date}</span>
+                  </div>
+                  <button onClick={() => deleteCycle(c.id)} style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '13px', cursor: 'pointer', padding: '0 2px' }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '3px', marginBottom: '4px' }}>
             {DAYS.map(d => <div key={d} style={{ textAlign: 'center', fontSize: '9px', fontWeight: 700, color: '#555', paddingBottom: '4px' }}>{d}</div>)}
           </div>
@@ -286,6 +327,9 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
               const ss = dateStr ? sessionsByDate(dateStr) : []
               const hasCompleted = ss.some(s => s.completed)
               const hasPending = ss.some(s => !s.completed)
+              const cycle = dateStr ? dateInCycle(dateStr) : null
+              const isCycleStart = cycle && dateStr === cycle.start_date
+              const isCycleEnd = cycle && dateStr === cycle.end_date
               return (
                 <div key={i} onClick={() => {
                     if (!valid) return
@@ -293,8 +337,8 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                     else { setSelectedDate(dateStr); isOnline ? setShowAssign(true) : setShowPresencial(true) }
                   }}
                   style={{
-                    background: !valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.08)' : isToday ? 'rgba(74,222,128,0.04)' : '#111',
-                    border: `1px solid ${!valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.35)' : hasPending ? 'rgba(251,191,36,0.25)' : isToday ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`,
+                    background: !valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.08)' : cycle ? 'rgba(167,139,250,0.07)' : isToday ? 'rgba(74,222,128,0.04)' : '#111',
+                    border: `1px solid ${!valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.35)' : hasPending ? 'rgba(251,191,36,0.25)' : cycle ? 'rgba(167,139,250,0.3)' : isToday ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`,
                     borderRadius: '8px', padding: '5px 3px', minHeight: '52px',
                     cursor: valid ? 'pointer' : 'default',
                     position: 'relative'
@@ -302,6 +346,8 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                   {valid && (
                     <>
                       <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: isToday ? 700 : 400, color: isToday ? '#4ade80' : '#f0f0f0' }}>{dayNum}</div>
+                      {isCycleStart && <div style={{ textAlign: 'center', fontSize: '7px', fontWeight: 700, color: '#4ade80', marginTop: '2px', letterSpacing: '.02em' }}>▶ Inicio</div>}
+                      {isCycleEnd && <div style={{ textAlign: 'center', fontSize: '7px', fontWeight: 700, color: '#f87171', marginTop: '2px', letterSpacing: '.02em' }}>■ Fin</div>}
                       {hasCompleted && (
                         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
                           <div style={{ width: '18px', height: '18px', borderRadius: '5px', background: '#4ade80', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#000' }}>✓</div>
@@ -321,7 +367,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           <div style={{ display: 'flex', gap: '12px', marginTop: '10px', fontSize: '10px', color: '#888', flexWrap: 'wrap' }}>
             <span><span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', marginRight: '4px' }}></span>Completada</span>
             {isOnline && <span><span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#fbbf24', marginRight: '4px' }}></span>Pendiente</span>}
-            {!isOnline && <span><span style={{ display: 'inline-block', width: '14px', height: '4px', borderRadius: '2px', background: '#a78bfa', marginRight: '4px', verticalAlign: 'middle' }}></span>Nota</span>}
+            <span><span style={{ display: 'inline-block', width: '14px', height: '4px', borderRadius: '2px', background: '#a78bfa', marginRight: '4px', verticalAlign: 'middle' }}></span>Ciclo</span>
           </div>
           <div style={{ marginTop: '10px', fontSize: '11px', color: '#555', textAlign: 'center' }}>Click en un día para asignar o ver sesiones</div>
         </div>
@@ -718,6 +764,30 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
       )}
 
       {/* PRESENCIAL: Day note + session check modal */}
+      {showCycleModal && (
+        <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowCycleModal(false)}>
+          <div className="modal">
+            <h3>Nuevo ciclo</h3>
+            <div className="field">
+              <label>Nombre del ciclo</label>
+              <input value={cycleForm.label} onChange={e => setCycleForm({...cycleForm, label: e.target.value})} placeholder="Ciclo 1, Marzo-Abril..." />
+            </div>
+            <div className="field">
+              <label>Fecha de inicio</label>
+              <input type="date" value={cycleForm.start_date} onChange={e => setCycleForm({...cycleForm, start_date: e.target.value})} />
+            </div>
+            <div className="field">
+              <label>Fecha de fin</label>
+              <input type="date" value={cycleForm.end_date} onChange={e => setCycleForm({...cycleForm, end_date: e.target.value})} />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => setShowCycleModal(false)}>Cancelar</button>
+              <button className="btn primary" onClick={saveCycle}>Guardar ciclo</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPresencial && (
         <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowPresencial(false)}>
           <div className="modal">
