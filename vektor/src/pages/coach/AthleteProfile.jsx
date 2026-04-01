@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import AthleteDashboard from './AthleteDashboard'
+import Routines from './Routines'
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DAYS = ['L','M','M','J','V','S','D']
@@ -263,35 +264,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
       </div>
 
       {/* ROUTINES TAB (online only) */}
-      {tab === 'routines' && isOnline && (
-        <div>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '10px' }}>Rutinas disponibles</div>
-          {allRoutines.length === 0 && <div className="empty">No hay rutinas creadas aún.</div>}
-          {allRoutines.map(r => {
-            const exData = (() => { try { return r.exercises_data ? JSON.parse(r.exercises_data) : null } catch { return null } })()
-            return (
-              <div key={r.id} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '12px 14px', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: exData?.length ? '8px' : 0 }}>
-                  <span style={{ fontWeight: 700, fontSize: '14px', color: '#f0f0f0' }}>{r.name}</span>
-                  <span style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa', padding: '2px 8px', borderRadius: '99px', fontSize: '10px', fontWeight: 700 }}>{r.sport}</span>
-                </div>
-                {exData && exData.map((ex, ei) => (
-                  <div key={ei} style={{ marginBottom: '6px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#aaa', marginBottom: '4px' }}>{ex.name}</div>
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                      {ex.series?.map((s, si) => (
-                        <span key={si} style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', color: '#f0f0f0' }}>
-                          S{si+1}: {s.reps||'?'} × <span style={{ color: '#4ade80', fontWeight: 700 }}>{s.weight||'?'}kg</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
-          })}
-        </div>
-      )}
+      {tab === 'routines' && isOnline && <Routines />}
 
       {/* CALENDAR TAB */}
       {tab === 'calendar' && (
