@@ -70,6 +70,13 @@ export default function Athletes() {
     fetchAll()
   }
 
+  async function toggleMode(e, athlete) {
+    e.stopPropagation()
+    const newMode = athlete.mode === 'presencial' ? 'online' : 'presencial'
+    await supabase.from('profiles').update({ mode: newMode }).eq('id', athlete.id)
+    fetchAll()
+  }
+
   async function savePayment() {
     if (!payForm.sessions_purchased || !payAthlete) return
     setLoading(true)
@@ -121,7 +128,11 @@ export default function Athletes() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px', flexWrap: 'wrap' }}>
                   <div style={{ fontWeight: 700, fontSize: '14px' }}>{a.name}</div>
-                  <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', padding: '2px 6px', borderRadius: '4px', background: a.mode === 'presencial' ? 'rgba(167,139,250,0.15)' : 'rgba(96,165,250,0.15)', color: a.mode === 'presencial' ? '#a78bfa' : '#60a5fa' }}>
+                  <span
+                    onClick={e => toggleMode(e, a)}
+                    title="Clic para cambiar modo"
+                    style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', background: a.mode === 'presencial' ? 'rgba(167,139,250,0.15)' : 'rgba(96,165,250,0.15)', color: a.mode === 'presencial' ? '#a78bfa' : '#60a5fa' }}
+                  >
                     {a.mode === 'presencial' ? 'Presencial' : 'Online'}
                   </span>
                 </div>
