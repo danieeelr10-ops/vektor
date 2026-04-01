@@ -638,7 +638,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                     </div>
                   </div>
                   {s.log_notes && <div style={{ fontSize: '12px', color: '#aaa', fontStyle: 'italic', background: '#111', padding: '7px 10px', borderRadius: '7px', marginBottom: '10px' }}>"{s.log_notes}"</div>}
-                  {s.notes && !s.completed && <div style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>📋 {s.notes}</div>}
+                  {s.notes && <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '8px', background: '#1a1a1a', padding: '7px 10px', borderRadius: '7px' }}>📋 {s.notes}</div>}
                   {exData && s.completed && exData.map((ex, exIdx) => {
                     if (!ex.series?.length) return null
                     return (
