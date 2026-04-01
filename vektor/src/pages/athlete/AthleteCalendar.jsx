@@ -420,39 +420,6 @@ export default function AthleteCalendar() {
         <span><span style={{ display: 'inline-block', width: '14px', height: '4px', borderRadius: '2px', background: '#a78bfa', marginRight: '4px', verticalAlign: 'middle' }}></span>Ciclo</span>
       </div>
 
-      {/* Online: upcoming list */}
-      {!isPresencial && pendingSessions.length > 0 && (
-        <>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '8px' }}>Próximas sesiones</div>
-          {pendingSessions.slice(0, 3).map(s => (
-            <div key={s.id} onClick={() => openSession(s)}
-              style={{ background: '#111', border: '1px solid rgba(251,191,36,0.15)', borderLeft: '3px solid #fbbf24', borderRadius: '0 10px 10px 0', padding: '10px 14px', marginBottom: '6px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '13px', color: '#f0f0f0' }}>{s.routines?.name}</div>
-                <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{s.date}</div>
-              </div>
-              <span style={{ color: '#fbbf24', fontSize: '18px' }}>›</span>
-            </div>
-          ))}
-        </>
-      )}
-
-      {/* Presencial: upcoming list (read-only) */}
-      {isPresencial && pendingSessions.length > 0 && (
-        <>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '8px' }}>Próximas sesiones</div>
-          {pendingSessions.slice(0, 3).map(s => (
-            <div key={s.id} onClick={() => setShowDayModal(s.date)}
-              style={{ background: '#111', border: '1px solid rgba(167,139,250,0.15)', borderLeft: '3px solid #a78bfa', borderRadius: '0 10px 10px 0', padding: '10px 14px', marginBottom: '6px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '13px', color: '#f0f0f0' }}>{s.date}</div>
-                {s.notes && <div style={{ fontSize: '11px', color: '#aaa', marginTop: '2px' }}>{s.notes}</div>}
-              </div>
-              <span style={{ color: '#a78bfa', fontSize: '18px' }}>›</span>
-            </div>
-          ))}
-        </>
-      )}
 
       {/* PRESENCIAL: Read-only day modal */}
       {showDayModal && (
