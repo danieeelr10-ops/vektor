@@ -14,6 +14,7 @@ export default function AthleteCalendar() {
   const [sessions, setSessions] = useState([])
   const [payments, setPayments] = useState([])
   const [cycles, setCycles] = useState([])
+  const [events, setEvents] = useState([])
   const [monthDate, setMonthDate] = useState(new Date())
   const [selectedSession, setSelectedSession] = useState(null)
   const [showDayModal, setShowDayModal] = useState(null)
@@ -34,14 +35,16 @@ export default function AthleteCalendar() {
   useEffect(() => { fetchAll() }, [])
 
   async function fetchAll() {
-    const [{ data: s }, { data: p }, { data: cy }] = await Promise.all([
+    const [{ data: s }, { data: p }, { data: cy }, { data: ev }] = await Promise.all([
       supabase.from('sessions').select('*, routines(name, description, exercises_data)').eq('athlete_id', user.id).order('date', { ascending: false }),
       supabase.from('payments').select('*').eq('athlete_id', user.id).order('date', { ascending: false }),
-      supabase.from('cycles').select('*').eq('athlete_id', user.id).order('start_date', { ascending: false })
+      supabase.from('cycles').select('*').eq('athlete_id', user.id).order('start_date', { ascending: false }),
+      supabase.from('calendar_events').select('*').eq('athlete_id', user.id).order('date')
     ])
     setSessions(s || [])
     setPayments(p || [])
     setCycles(cy || [])
+    setEvents(ev || [])
   }
 
   const lastPayment = payments[0]
@@ -53,6 +56,10 @@ export default function AthleteCalendar() {
 
   function dateInCycle(dateStr) {
     return cycles.find(c => dateStr >= c.start_date && dateStr <= c.end_date)
+  }
+
+  function eventsForDate(dateStr) {
+    return events.filter(e => e.date === dateStr)
   }
 
   function openSession(session) {
@@ -367,17 +374,19 @@ export default function AthleteCalendar() {
           const dateStr = valid ? toISO(year, month, dayNum) : null
           const isToday = dateStr === today
           const ss = dateStr ? sessionsForDate(dateStr) : []
+          const evs = dateStr ? eventsForDate(dateStr) : []
           const hasCompleted = ss.some(s => s.completed)
           const hasPending = ss.some(s => !s.completed)
+          const hasEvents = evs.length > 0
           const cycle = dateStr ? dateInCycle(dateStr) : null
           const isCycleStart = cycle && dateStr === cycle.start_date
           const isCycleEnd = cycle && dateStr === cycle.end_date
           return (
             <div key={i}
               onClick={() => {
-                if (!valid || !ss.length) return
-                if (isPresencial) setShowDayModal(dateStr)
-                else openSession(ss[0])
+                if (!valid) return
+                if (ss.length) { if (isPresencial) setShowDayModal(dateStr); else openSession(ss[0]) }
+                else if (hasEvents) setShowDayModal(dateStr)
               }}
               style={{
                 background: !valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.08)' : cycle ? 'rgba(167,139,250,0.07)' : isToday ? 'rgba(74,222,128,0.04)' : '#111',
@@ -406,6 +415,13 @@ export default function AthleteCalendar() {
                       </div>
                     )
                   })()}
+                  {hasEvents && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '3px' }}>
+                      <div style={{ background: '#fb923c', borderRadius: '3px', padding: '1px 3px', fontSize: '7px', fontWeight: 700, color: '#000', maxWidth: '95%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {evs[0].label.length > 7 ? evs[0].label.slice(0, 6) + '…' : evs[0].label}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -418,17 +434,24 @@ export default function AthleteCalendar() {
         <span><span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', background: '#4ade80', marginRight: '4px', verticalAlign: 'middle', fontSize: '8px', fontWeight: 700, color: '#000', textAlign: 'center', lineHeight: '12px' }}>✓</span>Completada</span>
         <span><span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', border: '2px solid #fbbf24', marginRight: '4px', verticalAlign: 'middle' }}></span>Pendiente</span>
         <span><span style={{ display: 'inline-block', width: '14px', height: '4px', borderRadius: '2px', background: '#a78bfa', marginRight: '4px', verticalAlign: 'middle' }}></span>Ciclo</span>
+        <span><span style={{ display: 'inline-block', width: '14px', height: '8px', borderRadius: '2px', background: '#fb923c', marginRight: '4px', verticalAlign: 'middle' }}></span>Evento</span>
       </div>
 
 
-      {/* PRESENCIAL: Read-only day modal */}
+      {/* PRESENCIAL / EVENTS: Read-only day modal */}
       {showDayModal && (
         <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowDayModal(null)}>
           <div className="modal">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h3 style={{ margin: 0 }}>Sesión — {showDayModal}</h3>
+              <h3 style={{ margin: 0 }}>{showDayModal}</h3>
               <button className="btn sm" onClick={() => setShowDayModal(null)}>✕</button>
             </div>
+            {eventsForDate(showDayModal).map(ev => (
+              <div key={ev.id} style={{ background: 'rgba(251,146,60,0.08)', border: '1px solid rgba(251,146,60,0.25)', borderRadius: '10px', padding: '10px 14px', marginBottom: '10px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#fb923c' }}>{ev.label}</div>
+                {ev.notes && <div style={{ fontSize: '12px', color: '#aaa', marginTop: '4px' }}>{ev.notes}</div>}
+              </div>
+            ))}
             {sessionsForDate(showDayModal).map(s => (
               <div key={s.id}>
                 {s.completed && (

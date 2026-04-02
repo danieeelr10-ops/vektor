@@ -61,6 +61,9 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [cycles, setCycles] = useState([])
   const [showCycleModal, setShowCycleModal] = useState(false)
   const [cycleForm, setCycleForm] = useState({ label: 'Ciclo 1', start_date: '', end_date: '' })
+  const [events, setEvents] = useState([])
+  const [showEventModal, setShowEventModal] = useState(false)
+  const [eventForm, setEventForm] = useState({ label: '', notes: '' })
   const today = new Date().toISOString().split('T')[0]
   const year = monthDate.getFullYear()
   const month = monthDate.getMonth()
@@ -82,14 +85,15 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   useEffect(() => { fetchAll() }, [athlete.id])
 
   async function fetchAll() {
-    const [{ data: s }, { data: m }, { data: r }, { data: ro }, { data: allR }, { data: p }, { data: cy }] = await Promise.all([
+    const [{ data: s }, { data: m }, { data: r }, { data: ro }, { data: allR }, { data: p }, { data: cy }, { data: ev }] = await Promise.all([
       supabase.from('sessions').select('*, routines(name,exercises_data)').eq('athlete_id', athlete.id).order('date', { ascending: false }),
       supabase.from('metrics').select('*').eq('user_id', athlete.id).order('date', { ascending: false }),
       supabase.from('rm_records').select('*').eq('user_id', athlete.id).order('date', { ascending: false }),
       supabase.from('routines').select('id,name').eq('coach_id', user.id).order('name'),
       supabase.from('routines').select('*').eq('coach_id', user.id).order('created_at', { ascending: false }),
       supabase.from('payments').select('*').eq('athlete_id', athlete.id).order('date', { ascending: false }),
-      supabase.from('cycles').select('*').eq('athlete_id', athlete.id).order('start_date', { ascending: false })
+      supabase.from('cycles').select('*').eq('athlete_id', athlete.id).order('start_date', { ascending: false }),
+      supabase.from('calendar_events').select('*').eq('athlete_id', athlete.id).order('date')
     ])
     setSessions(s || [])
     setMetrics(m || [])
@@ -98,6 +102,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     setAllRoutines(allR || [])
     setPayments(p || [])
     setCycles(cy || [])
+    setEvents(ev || [])
     if (ro?.length) setAssignForm(f => ({ ...f, routine_id: ro[0].id }))
   }
 
@@ -242,6 +247,29 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     return cycles.find(c => dateStr >= c.start_date && dateStr <= c.end_date)
   }
 
+  function eventsForDate(dateStr) {
+    return events.filter(e => e.date === dateStr)
+  }
+
+  async function saveEvent() {
+    if (!eventForm.label.trim() || !selectedDate) return
+    await supabase.from('calendar_events').insert({
+      athlete_id: athlete.id,
+      coach_id: user.id,
+      date: selectedDate,
+      label: eventForm.label.trim(),
+      notes: eventForm.notes.trim() || null
+    })
+    setShowEventModal(false)
+    setEventForm({ label: '', notes: '' })
+    fetchAll()
+  }
+
+  async function deleteEvent(id) {
+    await supabase.from('calendar_events').delete().eq('id', id)
+    fetchAll()
+  }
+
   async function saveEdit() {
     setEditSaving(true)
     await supabase.from('profiles').update({ name: editForm.name, sport: editForm.sport, mode: editForm.mode }).eq('id', athlete.id)
@@ -363,15 +391,17 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
               const dateStr = valid ? toISO(year, month, dayNum) : null
               const isToday = dateStr === today
               const ss = dateStr ? sessionsByDate(dateStr) : []
+              const evs = dateStr ? eventsForDate(dateStr) : []
               const hasCompleted = ss.some(s => s.completed)
               const hasPending = ss.some(s => !s.completed)
+              const hasEvents = evs.length > 0
               const cycle = dateStr ? dateInCycle(dateStr) : null
               const isCycleStart = cycle && dateStr === cycle.start_date
               const isCycleEnd = cycle && dateStr === cycle.end_date
               return (
                 <div key={i} onClick={() => {
                     if (!valid) return
-                    if (ss.length) setShowDayDetail({ date: dateStr, sessions: ss })
+                    if (ss.length || evs.length) setShowDayDetail({ date: dateStr, sessions: ss, events: evs })
                     else { setSelectedDate(dateStr); isOnline ? setShowAssign(true) : setShowPresencial(true) }
                   }}
                   style={{
@@ -401,6 +431,13 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                           </div>
                         )
                       })()}
+                      {hasEvents && (
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '3px' }}>
+                          <div style={{ background: '#fb923c', borderRadius: '3px', padding: '1px 3px', fontSize: '7px', fontWeight: 700, color: '#000', maxWidth: '95%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {evs[0].label.length > 7 ? evs[0].label.slice(0, 6) + '…' : evs[0].label}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -411,6 +448,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
             <span><span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#4ade80', marginRight: '4px' }}></span>Completada</span>
             <span><span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: '#fbbf24', marginRight: '4px' }}></span>Pendiente</span>
             <span><span style={{ display: 'inline-block', width: '14px', height: '4px', borderRadius: '2px', background: '#a78bfa', marginRight: '4px', verticalAlign: 'middle' }}></span>Ciclo</span>
+            <span><span style={{ display: 'inline-block', width: '14px', height: '8px', borderRadius: '2px', background: '#fb923c', marginRight: '4px', verticalAlign: 'middle' }}></span>Evento</span>
           </div>
           <div style={{ marginTop: '10px', fontSize: '11px', color: '#555', textAlign: 'center' }}>Click en un día para asignar o ver sesiones</div>
 
@@ -707,11 +745,25 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           <div className="modal" style={{ maxWidth: '480px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <h3 style={{ margin: 0 }}>{showDayDetail.date}</h3>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '6px' }}>
                 <button className="btn primary sm" onClick={() => { setSelectedDate(showDayDetail.date); setShowDayDetail(null); isOnline ? setShowAssign(true) : setShowPresencial(true) }}>+ Sesión</button>
+                <button className="btn sm" style={{ color: '#fb923c', borderColor: 'rgba(251,146,60,0.3)' }} onClick={() => { setSelectedDate(showDayDetail.date); setShowDayDetail(null); setShowEventModal(true) }}>+ Evento</button>
                 <button className="btn sm" onClick={() => setShowDayDetail(null)}>✕</button>
               </div>
             </div>
+            {showDayDetail.events?.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                {showDayDetail.events.map(ev => (
+                  <div key={ev.id} style={{ background: 'rgba(251,146,60,0.08)', border: '1px solid rgba(251,146,60,0.25)', borderRadius: '10px', padding: '10px 14px', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#fb923c' }}>{ev.label}</div>
+                      {ev.notes && <div style={{ fontSize: '12px', color: '#aaa', marginTop: '3px' }}>{ev.notes}</div>}
+                    </div>
+                    <button onClick={async () => { await deleteEvent(ev.id); setShowDayDetail(null) }} style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '14px', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
             {showDayDetail.sessions.map(s => {
               const exData = (() => { try { return s.routines?.exercises_data ? JSON.parse(s.routines.exercises_data) : null } catch { return null } })()
               const execData = (() => { try { return s.execution_data ? JSON.parse(s.execution_data) : null } catch { return null } })()
@@ -782,6 +834,25 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* EVENT MODAL */}
+      {showEventModal && (
+        <div className="modal-overlay" onClick={e => e.target===e.currentTarget && setShowEventModal(false)}>
+          <div className="modal">
+            <h3>Agregar evento — {selectedDate}</h3>
+            <div className="field"><label>Tipo de evento</label>
+              <input value={eventForm.label} onChange={e => setEventForm({...eventForm, label: e.target.value})} placeholder="Partido, Torneo, Trabajo en casa, Terapia..." autoFocus />
+            </div>
+            <div className="field"><label>Notas (opcional)</label>
+              <textarea rows={2} value={eventForm.notes} onChange={e => setEventForm({...eventForm, notes: e.target.value})} placeholder="Detalles adicionales..." />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => setShowEventModal(false)}>Cancelar</button>
+              <button className="btn primary" onClick={saveEvent} disabled={!eventForm.label.trim()}>Guardar</button>
+            </div>
           </div>
         </div>
       )}
