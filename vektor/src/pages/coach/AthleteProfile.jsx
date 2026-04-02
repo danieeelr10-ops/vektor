@@ -401,8 +401,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
               return (
                 <div key={i} onClick={() => {
                     if (!valid) return
-                    if (ss.length || evs.length) setShowDayDetail({ date: dateStr, sessions: ss, events: evs })
-                    else { setSelectedDate(dateStr); isOnline ? setShowAssign(true) : setShowPresencial(true) }
+                    setShowDayDetail({ date: dateStr, sessions: ss, events: evs })
                   }}
                   style={{
                     background: !valid ? 'transparent' : hasCompleted ? 'rgba(74,222,128,0.08)' : cycle ? 'rgba(167,139,250,0.07)' : isToday ? 'rgba(74,222,128,0.04)' : '#111',
@@ -745,12 +744,19 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           <div className="modal" style={{ maxWidth: '480px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <h3 style={{ margin: 0 }}>{showDayDetail.date}</h3>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button className="btn primary sm" onClick={() => { setSelectedDate(showDayDetail.date); setShowDayDetail(null); isOnline ? setShowAssign(true) : setShowPresencial(true) }}>+ Sesión</button>
-                <button className="btn sm" style={{ color: '#fb923c', borderColor: 'rgba(251,146,60,0.3)' }} onClick={() => { setSelectedDate(showDayDetail.date); setShowDayDetail(null); setShowEventModal(true) }}>+ Evento</button>
-                <button className="btn sm" onClick={() => setShowDayDetail(null)}>✕</button>
-              </div>
+              <button className="btn sm" onClick={() => setShowDayDetail(null)}>✕</button>
             </div>
+
+            {/* Action buttons — always visible */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: showDayDetail.sessions?.length || showDayDetail.events?.length ? '14px' : '0' }}>
+              <button className="btn primary" style={{ padding: '10px', fontSize: '13px' }} onClick={() => { setSelectedDate(showDayDetail.date); setShowDayDetail(null); isOnline ? setShowAssign(true) : setShowPresencial(true) }}>
+                + Sesión
+              </button>
+              <button className="btn" style={{ padding: '10px', fontSize: '13px', color: '#fb923c', borderColor: 'rgba(251,146,60,0.4)', background: 'rgba(251,146,60,0.06)' }} onClick={() => { setSelectedDate(showDayDetail.date); setShowDayDetail(null); setShowEventModal(true) }}>
+                + Evento
+              </button>
+            </div>
+
             {showDayDetail.events?.length > 0 && (
               <div style={{ marginBottom: '12px' }}>
                 {showDayDetail.events.map(ev => (
