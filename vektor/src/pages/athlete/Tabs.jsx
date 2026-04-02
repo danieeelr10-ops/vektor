@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import MetricsChart from '../../components/MetricsChart'
 
 export function Today() {
   const { user } = useAuth()
@@ -283,7 +284,14 @@ export function Metrics() {
           <div style={{ fontWeight:700, marginBottom:'6px' }}>Sin medidas registradas</div>
           <div style={{ fontSize:'13px' }}>Tu entrenador registrará tus medidas en cada sesión de seguimiento.</div>
         </div>
-      ) : metrics.map(m => {
+      ) : (
+        <>
+          {metrics.length >= 2 && (
+            <div className="card" style={{ marginBottom:'14px' }}>
+              <MetricsChart metrics={metrics} />
+            </div>
+          )}
+          {metrics.map(m => {
         const compRows = [['Peso',m.weight,'kg'],['Masa muscular esquelética',m.muscle_kg,'kg'],['% Grasa corporal',m.body_fat,'%'],['Masa grasa',m.fat_kg,'kg'],['Proteína',m.protein_kg,'kg'],['Minerales',m.bones_kg,'kg'],['Agua corporal',m.water_l,'L'],['Masa corporal magra',m.lean_mass_kg,'kg'],['IMC',m.imc,'kg/m²']]
         const circRows = [['Brazo der.',m.arm_r],['Brazo izq.',m.arm_l],['Pierna der.',m.leg_r],['Pierna izq.',m.leg_l],['Cintura',m.waist]]
         return (
@@ -326,6 +334,8 @@ export function Metrics() {
           </div>
         )
       })}
+        </>
+      )}
     </div>
   )
 }

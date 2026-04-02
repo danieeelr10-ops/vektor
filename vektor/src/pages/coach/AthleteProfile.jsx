@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import AthleteDashboard from './AthleteDashboard'
 import Routines from './Routines'
+import MetricsChart from '../../components/MetricsChart'
 
 const TIME_OPTIONS = ['', ...Array.from({length: 34}, (_, i) => {
   const totalMins = 5 * 60 + i * 30
@@ -635,6 +636,11 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
             </div>
           )}
           {metrics.length === 0 && !showMetricForm && <div className="empty">Sin medidas registradas.</div>}
+          {metrics.length >= 2 && (
+            <div style={{ background:'#111', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'12px', padding:'16px', marginBottom:'14px' }}>
+              <MetricsChart metrics={metrics} />
+            </div>
+          )}
           {metrics.map(m => {
             const compRows = [['Peso',m.weight,'kg'],['Masa muscular esquelética',m.muscle_kg,'kg'],['% Grasa corporal',m.body_fat,'%'],['Masa grasa',m.fat_kg,'kg'],['Proteína',m.protein_kg,'kg'],['Minerales',m.bones_kg,'kg'],['Agua corporal',m.water_l,'L'],['Masa corporal magra',m.lean_mass_kg,'kg'],['IMC',m.imc,'kg/m²']]
             const circRows = [['Brazo der.',m.arm_r],['Brazo izq.',m.arm_l],['Pierna der.',m.leg_r],['Pierna izq.',m.leg_l],['Cintura',m.waist]]
