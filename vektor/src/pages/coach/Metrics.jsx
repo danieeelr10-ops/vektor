@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import {
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis,
+  CartesianGrid, Tooltip, ReferenceLine, Area, AreaChart
+} from 'recharts'
 
 const EMPTY_FORM = {
   weight: '', muscle_kg: '', body_fat: '', fat_kg: '',
@@ -9,18 +13,40 @@ const EMPTY_FORM = {
 }
 
 const COMP_FIELDS = [
-  ['weight',     'Peso (kg)'],
-  ['muscle_kg',  'Masa muscular esquelética (kg)'],
-  ['body_fat',   '% Grasa corporal'],
-  ['fat_kg',     'Masa grasa (kg)'],
-  ['protein_kg', 'Proteína (kg)'],
-  ['bones_kg',   'Minerales (kg)'],
-  ['water_l',    'Agua corporal (L)'],
-  ['lean_mass_kg','Masa corporal magra (kg)'],
-  ['imc',        'IMC (kg/m²)'],
+  ['weight',      'Peso',                    'kg'],
+  ['muscle_kg',   'Masa muscular esq.',       'kg'],
+  ['body_fat',    '% Grasa corporal',         '%'],
+  ['fat_kg',      'Masa grasa',              'kg'],
+  ['protein_kg',  'Proteína',                'kg'],
+  ['bones_kg',    'Minerales',               'kg'],
+  ['water_l',     'Agua corporal',           'L'],
+  ['lean_mass_kg','Masa magra',              'kg'],
+  ['imc',         'IMC',                     'kg/m²'],
 ]
 
 const CIRC_FIELDS = [
+  ['arm_r',  'Brazo der.',   'cm'],
+  ['arm_l',  'Brazo izq.',   'cm'],
+  ['leg_r',  'Pierna der.',  'cm'],
+  ['leg_l',  'Pierna izq.',  'cm'],
+  ['waist',  'Cintura',      'cm'],
+]
+
+const ALL_FIELDS = [...COMP_FIELDS, ...CIRC_FIELDS]
+
+// Labels completos para el formulario
+const COMP_FORM_LABELS = [
+  ['weight',      'Peso (kg)'],
+  ['muscle_kg',   'Masa muscular esquelética (kg)'],
+  ['body_fat',    '% Grasa corporal'],
+  ['fat_kg',      'Masa grasa (kg)'],
+  ['protein_kg',  'Proteína (kg)'],
+  ['bones_kg',    'Minerales (kg)'],
+  ['water_l',     'Agua corporal (L)'],
+  ['lean_mass_kg','Masa corporal magra (kg)'],
+  ['imc',         'IMC (kg/m²)'],
+]
+const CIRC_FORM_LABELS = [
   ['arm_r',  'Brazo der. (cm)'],
   ['arm_l',  'Brazo izq. (cm)'],
   ['leg_r',  'Pierna der. (cm)'],
@@ -29,6 +55,20 @@ const CIRC_FIELDS = [
 ]
 
 const GOALS = ['Rendimiento deportivo','Bajar peso / grasa','Ganar músculo','Mejorar composición','Mantenimiento']
+
+// Tooltip personalizado
+function CustomTooltip({ active, payload, label, unit }) {
+  if (!active || !payload?.length) return null
+  const val = payload[0]?.value
+  return (
+    <div style={{ background:'#1a1a1a', border:'1px solid rgba(74,222,128,0.3)', borderRadius:'8px', padding:'10px 14px' }}>
+      <div style={{ fontSize:'11px', color:'var(--text2)', marginBottom:'4px' }}>{label}</div>
+      <div style={{ fontSize:'18px', fontWeight:700, color:'#4ade80', fontFamily:'var(--mono)' }}>
+        {val != null ? val : '—'} <span style={{ fontSize:'11px', fontWeight:400, color:'var(--text2)' }}>{unit}</span>
+      </div>
+    </div>
+  )
+}
 
 export default function CoachMetrics() {
   const [athletes, setAthletes] = useState([])
@@ -42,6 +82,7 @@ export default function CoachMetrics() {
   const [editSaving, setEditSaving] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0])
+  const [selectedField, setSelectedField] = useState('weight')
 
   useEffect(() => { fetchAthletes() }, [])
   useEffect(() => { if (selectedAthlete) fetchMetrics() }, [selectedAthlete])
@@ -54,7 +95,7 @@ export default function CoachMetrics() {
 
   async function fetchMetrics() {
     if (!selectedAthlete) return
-    const { data } = await supabase.from('metrics').select('*').eq('user_id', selectedAthlete).order('date', { ascending: false })
+    const { data } = await supabase.from('metrics').select('*').eq('user_id', selectedAthlete).order('date', { ascending: true })
     setMetrics(data || [])
   }
 
@@ -111,6 +152,25 @@ export default function CoachMetrics() {
 
   const athlete = athletes.find(a => a.id === selectedAthlete)
 
+  // Datos para gráfica
+  const fieldMeta = ALL_FIELDS.find(([k]) => k === selectedField) || ALL_FIELDS[0]
+  const chartData = metrics
+    .filter(m => m[selectedField] != null)
+    .map(m => ({
+      date: m.date,
+      value: parseFloat(m[selectedField]),
+      label: m.date.slice(5), // MM-DD
+    }))
+
+  const vals = chartData.map(d => d.value)
+  const minVal = vals.length ? Math.min(...vals) : 0
+  const maxVal = vals.length ? Math.max(...vals) : 0
+  const avgVal = vals.length ? vals.reduce((a,b) => a+b, 0) / vals.length : 0
+  const first = vals[0]
+  const last = vals[vals.length - 1]
+  const delta = vals.length >= 2 ? last - first : null
+  const deltaPct = first && delta != null ? (delta / first * 100) : null
+
   return (
     <div className="fade-in">
       <div style={{ marginBottom:'16px' }}>
@@ -121,10 +181,12 @@ export default function CoachMetrics() {
       </div>
 
       <div className="tabs">
-        <button className={`tab-btn ${tab==='registro'?'active':''}`} onClick={() => setTab('registro')}>Registrar medidas</button>
+        <button className={`tab-btn ${tab==='registro'?'active':''}`} onClick={() => setTab('registro')}>Registrar</button>
+        <button className={`tab-btn ${tab==='graficas'?'active':''}`} onClick={() => setTab('graficas')}>Gráficas</button>
         <button className={`tab-btn ${tab==='historial'?'active':''}`} onClick={() => setTab('historial')}>Historial</button>
       </div>
 
+      {/* ── REGISTRO ── */}
       {tab === 'registro' && (
         <>
           <div className="card" style={{ marginBottom:'12px' }}>
@@ -133,7 +195,7 @@ export default function CoachMetrics() {
               <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} style={{ width:'auto', padding:'5px 10px', fontSize:'12px' }} />
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
-              {COMP_FIELDS.map(([k, lbl]) => (
+              {COMP_FORM_LABELS.map(([k, lbl]) => (
                 <div key={k} className="field" style={{ margin:0 }}>
                   <label>{lbl}</label>
                   <input type="number" step="0.1" value={form[k]} onChange={e => setForm({...form, [k]: e.target.value})} placeholder="—" />
@@ -145,7 +207,7 @@ export default function CoachMetrics() {
           <div className="card" style={{ marginBottom:'12px' }}>
             <div className="stitle" style={{ marginBottom:'12px' }}>Circunferencias (cm)</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
-              {CIRC_FIELDS.map(([k, lbl]) => (
+              {CIRC_FORM_LABELS.map(([k, lbl]) => (
                 <div key={k} className="field" style={{ margin:0 }}>
                   <label>{lbl}</label>
                   <input type="number" step="0.1" value={form[k]} onChange={e => setForm({...form, [k]: e.target.value})} placeholder="—" />
@@ -179,12 +241,180 @@ export default function CoachMetrics() {
         </>
       )}
 
+      {/* ── GRÁFICAS ── */}
+      {tab === 'graficas' && (
+        <div>
+          {metrics.length < 2
+            ? <div className="empty">Se necesitan al menos 2 mediciones para ver gráficas.</div>
+            : (
+            <>
+              {/* Selector de campo — Composición */}
+              <div className="card" style={{ marginBottom:'12px' }}>
+                <div style={{ fontSize:'10px', fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'8px' }}>Composición corporal</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', marginBottom:'14px' }}>
+                  {COMP_FIELDS.map(([k, lbl, unit]) => (
+                    <button key={k} onClick={() => setSelectedField(k)} style={{
+                      padding:'5px 10px', borderRadius:'20px', border:'1px solid',
+                      borderColor: selectedField===k ? 'var(--green)' : 'rgba(255,255,255,0.1)',
+                      background: selectedField===k ? 'rgba(74,222,128,0.12)' : 'transparent',
+                      color: selectedField===k ? 'var(--green)' : 'var(--text2)',
+                      fontSize:'11px', fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                      transition:'all .15s'
+                    }}>{lbl}</button>
+                  ))}
+                </div>
+                <div style={{ fontSize:'10px', fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'8px' }}>Circunferencias</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                  {CIRC_FIELDS.map(([k, lbl, unit]) => (
+                    <button key={k} onClick={() => setSelectedField(k)} style={{
+                      padding:'5px 10px', borderRadius:'20px', border:'1px solid',
+                      borderColor: selectedField===k ? '#60a5fa' : 'rgba(255,255,255,0.1)',
+                      background: selectedField===k ? 'rgba(96,165,250,0.12)' : 'transparent',
+                      color: selectedField===k ? '#60a5fa' : 'var(--text2)',
+                      fontSize:'11px', fontWeight:600, cursor:'pointer', fontFamily:'inherit',
+                      transition:'all .15s'
+                    }}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Gráfica */}
+              {chartData.length < 2
+                ? <div className="card" style={{ textAlign:'center', color:'var(--text2)', fontSize:'13px', padding:'32px' }}>Sin datos suficientes para "{fieldMeta[1]}".</div>
+                : (
+                <div className="card" style={{ marginBottom:'12px' }}>
+                  {/* Header */}
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'20px' }}>
+                    <div>
+                      <div style={{ fontSize:'13px', fontWeight:700, color:'var(--text1)', marginBottom:'2px' }}>{fieldMeta[1]}</div>
+                      <div style={{ fontSize:'11px', color:'var(--text2)' }}>{chartData.length} mediciones · {athlete?.name}</div>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontSize:'24px', fontWeight:800, color: CIRC_FIELDS.find(([k])=>k===selectedField)?'#60a5fa':'#4ade80', fontFamily:'var(--mono)', lineHeight:1 }}>
+                        {last?.toFixed(1)}
+                      </div>
+                      <div style={{ fontSize:'10px', color:'var(--text2)', marginTop:'2px' }}>{fieldMeta[2]}</div>
+                    </div>
+                  </div>
+
+                  {/* Chart */}
+                  <div style={{ height:'220px', marginLeft:'-8px', marginRight:'-8px' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData} margin={{ top:8, right:16, left:0, bottom:0 }}>
+                        <defs>
+                          <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={CIRC_FIELDS.find(([k])=>k===selectedField)?'#60a5fa':'#4ade80'} stopOpacity={0.18}/>
+                            <stop offset="95%" stopColor={CIRC_FIELDS.find(([k])=>k===selectedField)?'#60a5fa':'#4ade80'} stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize:10, fill:'#666', fontFamily:'var(--mono)' }}
+                          axisLine={false} tickLine={false}
+                        />
+                        <YAxis
+                          domain={['auto','auto']}
+                          tick={{ fontSize:10, fill:'#666', fontFamily:'var(--mono)' }}
+                          axisLine={false} tickLine={false} width={36}
+                        />
+                        <Tooltip content={<CustomTooltip unit={fieldMeta[2]} />} />
+                        <ReferenceLine
+                          y={avgVal}
+                          stroke="rgba(255,255,255,0.15)"
+                          strokeDasharray="4 4"
+                          label={{ value:`Prom ${avgVal.toFixed(1)}`, position:'insideTopRight', fontSize:9, fill:'#555' }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="value"
+                          stroke={CIRC_FIELDS.find(([k])=>k===selectedField)?'#60a5fa':'#4ade80'}
+                          strokeWidth={2.5}
+                          fill="url(#colorVal)"
+                          dot={{ r:4, fill:CIRC_FIELDS.find(([k])=>k===selectedField)?'#60a5fa':'#4ade80', strokeWidth:0 }}
+                          activeDot={{ r:6, strokeWidth:0 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Stats row */}
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', marginTop:'16px', paddingTop:'16px', borderTop:'1px solid var(--border)' }}>
+                    {[
+                      { label:'Inicial', value: first?.toFixed(1), unit: fieldMeta[2] },
+                      { label:'Actual',  value: last?.toFixed(1),  unit: fieldMeta[2] },
+                      { label:'Variación', value: delta != null ? `${delta > 0 ? '+' : ''}${delta.toFixed(1)}` : '—', unit: delta != null ? fieldMeta[2] : '', color: delta == null ? 'var(--text2)' : delta < 0 ? '#4ade80' : delta > 0 ? '#f87171' : 'var(--text2)' },
+                      { label:'Prom.', value: avgVal.toFixed(1), unit: fieldMeta[2] },
+                    ].map(s => (
+                      <div key={s.label} style={{ background:'var(--bg3)', borderRadius:'8px', padding:'10px 8px', textAlign:'center' }}>
+                        <div style={{ fontSize:'9px', fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:'4px' }}>{s.label}</div>
+                        <div style={{ fontSize:'15px', fontWeight:800, color: s.color || 'var(--text1)', fontFamily:'var(--mono)' }}>{s.value}</div>
+                        <div style={{ fontSize:'9px', color:'var(--text3)' }}>{s.unit}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Delta badge */}
+                  {deltaPct != null && (
+                    <div style={{ marginTop:'10px', display:'flex', justifyContent:'center' }}>
+                      <span style={{
+                        fontSize:'11px', fontWeight:700, padding:'4px 12px', borderRadius:'20px',
+                        background: Math.abs(deltaPct) < 0.01 ? 'rgba(255,255,255,0.06)' : deltaPct < 0 ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)',
+                        color: Math.abs(deltaPct) < 0.01 ? 'var(--text2)' : deltaPct < 0 ? '#4ade80' : '#f87171',
+                        border: `1px solid ${Math.abs(deltaPct) < 0.01 ? 'rgba(255,255,255,0.08)' : deltaPct < 0 ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
+                      }}>
+                        {deltaPct > 0 ? '▲' : deltaPct < 0 ? '▼' : '='} {Math.abs(deltaPct).toFixed(1)}% desde el inicio
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Mini resumen de todos los campos con datos */}
+              <div className="card">
+                <div style={{ fontSize:'10px', fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'12px' }}>Resumen general — última medición</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px' }}>
+                  {ALL_FIELDS.map(([k, lbl, unit]) => {
+                    const last2 = metrics.filter(m => m[k] != null)
+                    if (last2.length === 0) return null
+                    const cur = parseFloat(last2[last2.length - 1][k])
+                    const prev = last2.length >= 2 ? parseFloat(last2[last2.length - 2][k]) : null
+                    const diff = prev != null ? cur - prev : null
+                    const isCirc = CIRC_FIELDS.find(([ck]) => ck === k)
+                    return (
+                      <button key={k} onClick={() => setSelectedField(k)} style={{
+                        display:'flex', justifyContent:'space-between', alignItems:'center',
+                        padding:'8px 10px', borderRadius:'8px', cursor:'pointer', fontFamily:'inherit',
+                        background: selectedField === k ? (isCirc ? 'rgba(96,165,250,0.1)' : 'rgba(74,222,128,0.1)') : 'var(--bg3)',
+                        border: `1px solid ${selectedField === k ? (isCirc ? 'rgba(96,165,250,0.3)' : 'rgba(74,222,128,0.3)') : 'transparent'}`,
+                        transition:'all .15s', textAlign:'left'
+                      }}>
+                        <span style={{ fontSize:'10px', color:'var(--text2)' }}>{lbl}</span>
+                        <div style={{ textAlign:'right' }}>
+                          <div style={{ fontSize:'13px', fontWeight:700, fontFamily:'var(--mono)', color: isCirc ? '#60a5fa' : '#4ade80' }}>{cur.toFixed(1)} <span style={{ fontSize:'9px', fontWeight:400, color:'var(--text3)' }}>{unit}</span></div>
+                          {diff != null && Math.abs(diff) > 0.01 && (
+                            <div style={{ fontSize:'9px', color: diff < 0 ? '#4ade80' : '#f87171' }}>
+                              {diff > 0 ? '+' : ''}{diff.toFixed(1)}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── HISTORIAL ── */}
       {tab === 'historial' && (
         metrics.length === 0
           ? <div className="empty">Sin medidas registradas para este atleta.</div>
-          : metrics.map(m => {
-            const compRows = COMP_FIELDS.map(([k, lbl]) => [lbl, m[k]])
-            const circRows = CIRC_FIELDS.map(([k, lbl]) => [lbl, m[k]])
+          : [...metrics].reverse().map(m => {
+            const compRows = COMP_FORM_LABELS.map(([k, lbl]) => [lbl, m[k]])
+            const circRows = CIRC_FORM_LABELS.map(([k, lbl]) => [lbl, m[k]])
             return (
               <div className="card" key={m.id} style={{ marginBottom:'10px' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'12px' }}>
@@ -214,7 +444,7 @@ export default function CoachMetrics() {
                       {circRows.filter(([,v]) => v).map(([lbl, val], i) => (
                         <div key={lbl} style={{ display:'flex', justifyContent:'space-between', padding:'7px 10px', background: i%2===0?'var(--bg3)':'var(--bg2)', fontSize:'12px' }}>
                           <span style={{ color:'var(--text2)' }}>{lbl}</span>
-                          <span style={{ color:'var(--green)', fontWeight:700, fontFamily:'var(--mono)' }}>{val} cm</span>
+                          <span style={{ color:'#60a5fa', fontWeight:700, fontFamily:'var(--mono)' }}>{val} cm</span>
                         </div>
                       ))}
                     </div>
@@ -233,7 +463,7 @@ export default function CoachMetrics() {
             <h3>Editar medición — {editingMetric.date}</h3>
             <div style={{ fontSize:'10px', fontWeight:700, color:'#555', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'8px' }}>Composición corporal</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'12px' }}>
-              {COMP_FIELDS.map(([k, lbl]) => (
+              {COMP_FORM_LABELS.map(([k, lbl]) => (
                 <div key={k} className="field" style={{ margin:0 }}>
                   <label style={{ fontSize:'10px' }}>{lbl}</label>
                   <input type="number" step="0.1" value={editingMetric[k]||''} onChange={e => setEditingMetric(p => ({...p,[k]:e.target.value}))} style={{ padding:'6px 8px', fontSize:'12px' }} />
@@ -242,7 +472,7 @@ export default function CoachMetrics() {
             </div>
             <div style={{ fontSize:'10px', fontWeight:700, color:'#555', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'8px' }}>Circunferencias</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'12px' }}>
-              {CIRC_FIELDS.map(([k, lbl]) => (
+              {CIRC_FORM_LABELS.map(([k, lbl]) => (
                 <div key={k} className="field" style={{ margin:0 }}>
                   <label style={{ fontSize:'10px' }}>{lbl}</label>
                   <input type="number" step="0.1" value={editingMetric[k]||''} onChange={e => setEditingMetric(p => ({...p,[k]:e.target.value}))} style={{ padding:'6px 8px', fontSize:'12px' }} />
