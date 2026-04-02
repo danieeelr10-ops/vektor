@@ -628,7 +628,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                   <span style={{ fontSize: '12px', color: '#aaa', fontFamily: 'monospace' }}>{m.date}</span>
                   <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                     {m.goal && <span style={{ fontSize: '11px', color: '#4ade80', fontWeight: 600 }}>{m.goal}</span>}
-                    <button onClick={async () => { if (!confirm('¿Eliminar medición?')) return; await supabase.from('metrics').delete().eq('id', m.id); fetchAll() }} style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '13px', cursor: 'pointer' }}>✕</button>
+                    <button onClick={async () => { if (!confirm('¿Eliminar medición?')) return; const { error } = await supabase.from('metrics').delete().eq('id', m.id); if (error) alert('Error: ' + error.message); else fetchAll() }} style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '13px', cursor: 'pointer' }}>✕</button>
                   </div>
                 </div>
                 <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '6px' }}>Composición corporal</div>
