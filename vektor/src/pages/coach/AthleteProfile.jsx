@@ -64,6 +64,9 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [events, setEvents] = useState([])
   const [showEventModal, setShowEventModal] = useState(false)
   const [eventForm, setEventForm] = useState({ label: '', notes: '' })
+  const [showMetricForm, setShowMetricForm] = useState(false)
+  const [mForm, setMForm] = useState({ date: new Date().toISOString().split('T')[0], weight: '', muscle_kg: '', body_fat: '', fat_kg: '', protein_kg: '', bones_kg: '', water_l: '', lean_mass_kg: '', imc: '', arm_r: '', arm_l: '', leg_r: '', leg_l: '', waist: '', note: '' })
+  const [mSaving, setMSaving] = useState(false)
   const today = new Date().toISOString().split('T')[0]
   const year = monthDate.getFullYear()
   const month = monthDate.getMonth()
@@ -267,6 +270,20 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
 
   async function deleteEvent(id) {
     await supabase.from('calendar_events').delete().eq('id', id)
+    fetchAll()
+  }
+
+  const COMP_FIELDS = [['weight','Peso (kg)'],['muscle_kg','Masa musc. esquelética (kg)'],['body_fat','% Grasa corporal'],['fat_kg','Masa grasa (kg)'],['protein_kg','Proteína (kg)'],['bones_kg','Minerales (kg)'],['water_l','Agua corporal (L)'],['lean_mass_kg','Masa corp. magra (kg)'],['imc','IMC (kg/m²)']]
+  const CIRC_FIELDS = [['arm_r','Brazo der. (cm)'],['arm_l','Brazo izq. (cm)'],['leg_r','Pierna der. (cm)'],['leg_l','Pierna izq. (cm)'],['waist','Cintura (cm)']]
+
+  async function saveMetric() {
+    setMSaving(true)
+    const payload = { user_id: athlete.id, date: mForm.date, note: mForm.note || null }
+    ;[...COMP_FIELDS, ...CIRC_FIELDS].forEach(([k]) => { if (mForm[k] !== '') payload[k] = parseFloat(mForm[k]) })
+    await supabase.from('metrics').insert(payload)
+    setMSaving(false)
+    setShowMetricForm(false)
+    setMForm({ date: today, weight: '', muscle_kg: '', body_fat: '', fat_kg: '', protein_kg: '', bones_kg: '', water_l: '', lean_mass_kg: '', imc: '', arm_r: '', arm_l: '', leg_r: '', leg_l: '', waist: '', note: '' })
     fetchAll()
   }
 
@@ -573,35 +590,73 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
       {/* METRICS TAB */}
       {tab === 'metrics' && (
         <div>
-          {metrics.length === 0 && <div className="empty">Sin medidas registradas.</div>}
-          {metrics.map(m => (
-            <div key={m.id} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', color: '#aaa', fontFamily: 'monospace' }}>{m.date}</span>
-                {m.goal && <span style={{ fontSize: '11px', color: '#4ade80', fontWeight: 600 }}>{m.goal}</span>}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
-                {[['Peso',m.weight,'kg'],['Grasa',m.body_fat,'%'],['Músculo',m.muscle_pct,'%']].map(([l,v,u]) => v ? (
-                  <div key={l} style={{ background: '#1a1a1a', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '9px', color: '#555', textTransform: 'uppercase', fontWeight: 700 }}>{l}</div>
-                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#4ade80', marginTop: '3px', fontFamily: 'monospace' }}>{v}<span style={{ fontSize: '9px' }}>{u}</span></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+            <button className="btn primary sm" onClick={() => setShowMetricForm(v => !v)}>{showMetricForm ? '— Cancelar' : '+ Nueva medición'}</button>
+          </div>
+          {showMetricForm && (
+            <div style={{ background: '#111', border: '1px solid rgba(74,222,128,0.2)', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+              <div className="field"><label>Fecha</label><input type="date" value={mForm.date} onChange={e => setMForm({...mForm, date: e.target.value})} /></div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '8px' }}>Composición corporal</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                {COMP_FIELDS.map(([k, lbl]) => (
+                  <div key={k}>
+                    <label style={{ fontSize: '10px', color: '#555', fontWeight: 700, display: 'block', marginBottom: '3px' }}>{lbl}</label>
+                    <input type="number" step="0.1" value={mForm[k]} onChange={e => setMForm({...mForm, [k]: e.target.value})} placeholder="—" style={{ padding: '7px 10px', fontSize: '13px' }} />
                   </div>
-                ) : null)}
+                ))}
               </div>
-              {(m.arm_r || m.waist) && (
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '8px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-                    {[['Brazo der.',m.arm_r],['Brazo izq.',m.arm_l],['Pierna der.',m.leg_r],['Cintura',m.waist]].filter(c=>c[1]).map(c => (
-                      <div key={c[0]} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <span style={{ color: '#aaa' }}>{c[0]}</span>
-                        <span style={{ color: '#4ade80', fontWeight: 700 }}>{c[1]} cm</span>
-                      </div>
-                    ))}
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '8px' }}>Circunferencias</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                {CIRC_FIELDS.map(([k, lbl]) => (
+                  <div key={k}>
+                    <label style={{ fontSize: '10px', color: '#555', fontWeight: 700, display: 'block', marginBottom: '3px' }}>{lbl}</label>
+                    <input type="number" step="0.1" value={mForm[k]} onChange={e => setMForm({...mForm, [k]: e.target.value})} placeholder="—" style={{ padding: '7px 10px', fontSize: '13px' }} />
+                  </div>
+                ))}
+              </div>
+              <div className="field"><label>Nota</label><input value={mForm.note} onChange={e => setMForm({...mForm, note: e.target.value})} placeholder="Observaciones..." /></div>
+              <button className="btn primary" style={{ width: '100%' }} onClick={saveMetric} disabled={mSaving}>{mSaving ? 'Guardando...' : 'Guardar medición'}</button>
+            </div>
+          )}
+          {metrics.length === 0 && !showMetricForm && <div className="empty">Sin medidas registradas.</div>}
+          {metrics.map(m => {
+            const compRows = [['Peso',m.weight,'kg'],['Masa musc. esquelética',m.muscle_kg,'kg'],['% Grasa corporal',m.body_fat,'%'],['Masa grasa',m.fat_kg,'kg'],['Proteína',m.protein_kg,'kg'],['Minerales',m.bones_kg,'kg'],['Agua corporal',m.water_l,'L'],['Masa corp. magra',m.lean_mass_kg,'kg'],['IMC',m.imc,'kg/m²']]
+            const circRows = [['Brazo der.',m.arm_r],['Brazo izq.',m.arm_l],['Pierna der.',m.leg_r],['Pierna izq.',m.leg_l],['Cintura',m.waist]]
+            return (
+              <div key={m.id} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '12px', color: '#aaa', fontFamily: 'monospace' }}>{m.date}</span>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    {m.goal && <span style={{ fontSize: '11px', color: '#4ade80', fontWeight: 600 }}>{m.goal}</span>}
+                    <button onClick={async () => { if (!confirm('¿Eliminar medición?')) return; await supabase.from('metrics').delete().eq('id', m.id); fetchAll() }} style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '13px', cursor: 'pointer' }}>✕</button>
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+                <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '6px' }}>Composición corporal</div>
+                <div style={{ borderRadius: '8px', overflow: 'hidden', marginBottom: '10px' }}>
+                  {compRows.filter(([,v]) => v != null).map(([lbl, val, unit], i) => (
+                    <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: i % 2 === 0 ? '#1a1a1a' : '#161616', fontSize: '12px' }}>
+                      <span style={{ color: '#aaa' }}>{lbl}</span>
+                      <span style={{ color: '#4ade80', fontWeight: 700, fontFamily: 'monospace' }}>{val} <span style={{ fontSize: '10px', color: '#555' }}>{unit}</span></span>
+                    </div>
+                  ))}
+                </div>
+                {circRows.some(([,v]) => v) && (
+                  <>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '6px' }}>Circunferencias</div>
+                    <div style={{ borderRadius: '8px', overflow: 'hidden' }}>
+                      {circRows.filter(([,v]) => v).map(([lbl, val], i) => (
+                        <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 10px', background: i % 2 === 0 ? '#1a1a1a' : '#161616', fontSize: '12px' }}>
+                          <span style={{ color: '#aaa' }}>{lbl}</span>
+                          <span style={{ color: '#4ade80', fontWeight: 700, fontFamily: 'monospace' }}>{val} <span style={{ fontSize: '10px', color: '#555' }}>cm</span></span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {m.note && <div style={{ fontSize: '12px', color: '#555', fontStyle: 'italic', marginTop: '10px' }}>"{m.note}"</div>}
+              </div>
+            )
+          })}
         </div>
       )}
 

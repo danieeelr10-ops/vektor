@@ -283,50 +283,49 @@ export function Metrics() {
           <div style={{ fontWeight:700, marginBottom:'6px' }}>Sin medidas registradas</div>
           <div style={{ fontSize:'13px' }}>Tu entrenador registrará tus medidas en cada sesión de seguimiento.</div>
         </div>
-      ) : metrics.map(m => (
-        <div className="card" key={m.id} style={{ marginBottom:'10px' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px' }}>
-            <div>
-              <div style={{ fontSize:'12px', fontFamily:'var(--mono)', color:'var(--text2)' }}>{m.date}</div>
-              {m.goal && <div style={{ fontSize:'11px', color:'var(--green)', fontWeight:600, marginTop:'2px' }}>{m.goal}</div>}
-            </div>
-            {m.pdf_url && (
-              <a href={m.pdf_url} target="_blank" rel="noreferrer"
-                style={{ display:'inline-flex', alignItems:'center', gap:'5px', background:'rgba(74,222,128,0.1)', border:'1px solid rgba(74,222,128,0.25)', borderRadius:'7px', padding:'5px 10px', fontSize:'11px', color:'var(--green)', textDecoration:'none', fontWeight:700 }}>
-                📄 Ver PDF báscula
-              </a>
-            )}
-          </div>
-          <div className="g3" style={{ marginBottom:'8px' }}>
-            <div className="metric"><div className="lbl">Peso</div><div className="val" style={{ fontSize:'16px' }}>{m.weight}<span style={{ fontSize:'10px' }}> kg</span></div></div>
-            <div className="metric"><div className="lbl">Grasa</div><div className="val" style={{ fontSize:'16px' }}>{m.body_fat}<span style={{ fontSize:'10px' }}>%</span></div></div>
-            <div className="metric"><div className="lbl">Músculo</div><div className="val" style={{ fontSize:'16px' }}>{m.muscle_pct}<span style={{ fontSize:'10px' }}>%</span></div></div>
-          </div>
-          <div className="g3" style={{ marginBottom:'8px' }}>
-            <div className="metric"><div className="lbl">Agua</div><div className="val" style={{ fontSize:'16px' }}>{m.water_pct}<span style={{ fontSize:'10px' }}>%</span></div></div>
-            <div className="metric"><div className="lbl">IMC</div><div className="val" style={{ fontSize:'16px' }}>{m.imc}</div></div>
-            <div className="metric"><div className="lbl">Edad corp.</div><div className="val" style={{ fontSize:'16px' }}>{m.body_age}</div></div>
-          </div>
-          {(m.arm_r || m.waist) && (
-            <div style={{ borderTop:'1px solid var(--border)', paddingTop:'10px' }}>
-              <div className="stitle" style={{ marginBottom:'8px' }}>Circunferencias</div>
-              <div className="g2">
-                {[['Brazo der. rel.',m.arm_r],['Brazo izq. rel.',m.arm_l],['Brazo der. flex.',m.arm_r_flex],['Brazo izq. flex.',m.arm_l_flex],['Pierna der.',m.leg_r],['Pierna izq.',m.leg_l]].filter(c=>c[1]).map(c=>(
-                  <div key={c[0]} style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', padding:'4px 0', borderBottom:'1px solid var(--border)' }}>
-                    <span style={{ color:'var(--text2)' }}>{c[0]}</span>
-                    <span style={{ color:'var(--green)', fontWeight:700 }}>{c[1]} cm</span>
-                  </div>
-                ))}
+      ) : metrics.map(m => {
+        const compRows = [['Peso',m.weight,'kg'],['Masa musc. esquelética',m.muscle_kg,'kg'],['% Grasa corporal',m.body_fat,'%'],['Masa grasa',m.fat_kg,'kg'],['Proteína',m.protein_kg,'kg'],['Minerales',m.bones_kg,'kg'],['Agua corporal',m.water_l,'L'],['Masa corp. magra',m.lean_mass_kg,'kg'],['IMC',m.imc,'kg/m²']]
+        const circRows = [['Brazo der.',m.arm_r],['Brazo izq.',m.arm_l],['Pierna der.',m.leg_r],['Pierna izq.',m.leg_l],['Cintura',m.waist]]
+        return (
+          <div className="card" key={m.id} style={{ marginBottom:'10px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'12px' }}>
+              <div>
+                <div style={{ fontSize:'12px', fontFamily:'var(--mono)', color:'var(--text2)' }}>{m.date}</div>
+                {m.goal && <div style={{ fontSize:'11px', color:'var(--green)', fontWeight:600, marginTop:'2px' }}>{m.goal}</div>}
               </div>
-              {m.waist && <div style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', padding:'6px 0' }}>
-                <span style={{ color:'var(--text2)' }}>Cintura</span>
-                <span style={{ color:'var(--green)', fontWeight:700 }}>{m.waist} cm</span>
-              </div>}
+              {m.pdf_url && (
+                <a href={m.pdf_url} target="_blank" rel="noreferrer"
+                  style={{ display:'inline-flex', alignItems:'center', gap:'5px', background:'rgba(74,222,128,0.1)', border:'1px solid rgba(74,222,128,0.25)', borderRadius:'7px', padding:'5px 10px', fontSize:'11px', color:'var(--green)', textDecoration:'none', fontWeight:700 }}>
+                  📄 PDF
+                </a>
+              )}
             </div>
-          )}
-          {m.note && <div style={{ fontSize:'12px', color:'var(--text2)', fontStyle:'italic', marginTop:'8px' }}>"{m.note}"</div>}
-        </div>
-      ))}
+            <div className="stitle" style={{ marginBottom:'6px' }}>Composición corporal</div>
+            <div style={{ borderRadius:'8px', overflow:'hidden', marginBottom:'12px' }}>
+              {compRows.filter(([,v]) => v != null).map(([lbl, val, unit], i) => (
+                <div key={lbl} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 10px', background: i%2===0?'var(--bg3)':'var(--bg2)', fontSize:'12px' }}>
+                  <span style={{ color:'var(--text2)' }}>{lbl}</span>
+                  <span style={{ color:'var(--green)', fontWeight:700, fontFamily:'var(--mono)' }}>{val} <span style={{ fontSize:'10px', color:'var(--text3)' }}>{unit}</span></span>
+                </div>
+              ))}
+            </div>
+            {circRows.some(([,v]) => v) && (
+              <>
+                <div className="stitle" style={{ marginBottom:'6px' }}>Circunferencias</div>
+                <div style={{ borderRadius:'8px', overflow:'hidden' }}>
+                  {circRows.filter(([,v]) => v).map(([lbl, val], i) => (
+                    <div key={lbl} style={{ display:'flex', justifyContent:'space-between', padding:'7px 10px', background: i%2===0?'var(--bg3)':'var(--bg2)', fontSize:'12px' }}>
+                      <span style={{ color:'var(--text2)' }}>{lbl}</span>
+                      <span style={{ color:'var(--green)', fontWeight:700, fontFamily:'var(--mono)' }}>{val} <span style={{ fontSize:'10px', color:'var(--text3)' }}>cm</span></span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {m.note && <div style={{ fontSize:'12px', color:'var(--text2)', fontStyle:'italic', marginTop:'10px' }}>"{m.note}"</div>}
+          </div>
+        )
+      })}
     </div>
   )
 }
