@@ -273,8 +273,24 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     fetchAll()
   }
 
-  const COMP_FIELDS = [['weight','Peso (kg)'],['muscle_kg','Masa musc. esquelética (kg)'],['body_fat','% Grasa corporal'],['fat_kg','Masa grasa (kg)'],['protein_kg','Proteína (kg)'],['bones_kg','Minerales (kg)'],['water_l','Agua corporal (L)'],['lean_mass_kg','Masa corp. magra (kg)'],['imc','IMC (kg/m²)']]
-  const CIRC_FIELDS = [['arm_r','Brazo der. (cm)'],['arm_l','Brazo izq. (cm)'],['leg_r','Pierna der. (cm)'],['leg_l','Pierna izq. (cm)'],['waist','Cintura (cm)']]
+  const COMP_FIELDS = [
+    ['weight','Peso (kg)'],
+    ['muscle_kg','Masa muscular esquelética (kg)'],
+    ['body_fat','% Grasa corporal'],
+    ['fat_kg','Masa grasa (kg)'],
+    ['protein_kg','Proteína (kg)'],
+    ['bones_kg','Minerales (kg)'],
+    ['water_l','Agua corporal (L)'],
+    ['lean_mass_kg','Masa corporal magra (kg)'],
+    ['imc','IMC (kg/m²)'],
+  ]
+  const CIRC_FIELDS = [
+    ['arm_r','Brazo der. (cm)'],
+    ['arm_l','Brazo izq. (cm)'],
+    ['leg_r','Pierna der. (cm)'],
+    ['leg_l','Pierna izq. (cm)'],
+    ['waist','Cintura (cm)'],
+  ]
 
   async function saveMetric() {
     setMSaving(true)
@@ -620,7 +636,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           )}
           {metrics.length === 0 && !showMetricForm && <div className="empty">Sin medidas registradas.</div>}
           {metrics.map(m => {
-            const compRows = [['Peso',m.weight,'kg'],['Masa musc. esquelética',m.muscle_kg,'kg'],['% Grasa corporal',m.body_fat,'%'],['Masa grasa',m.fat_kg,'kg'],['Proteína',m.protein_kg,'kg'],['Minerales',m.bones_kg,'kg'],['Agua corporal',m.water_l,'L'],['Masa corp. magra',m.lean_mass_kg,'kg'],['IMC',m.imc,'kg/m²']]
+            const compRows = [['Peso',m.weight,'kg'],['Masa muscular esquelética',m.muscle_kg,'kg'],['% Grasa corporal',m.body_fat,'%'],['Masa grasa',m.fat_kg,'kg'],['Proteína',m.protein_kg,'kg'],['Minerales',m.bones_kg,'kg'],['Agua corporal',m.water_l,'L'],['Masa corporal magra',m.lean_mass_kg,'kg'],['IMC',m.imc,'kg/m²']]
             const circRows = [['Brazo der.',m.arm_r],['Brazo izq.',m.arm_l],['Pierna der.',m.leg_r],['Pierna izq.',m.leg_l],['Cintura',m.waist]]
             return (
               <div key={m.id} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
