@@ -332,7 +332,7 @@ function RoutineDetail({ routine, onBack, onSaved, exercises, setExercises, coac
 }
 
 // ─── Main Routines List ───────────────────────────────────────────────
-export default function Routines() {
+export default function Routines({ athleteId }) {
   const { user } = useAuth()
   const [routines, setRoutines] = useState([])
   const [exercises, setExercises] = useState([])
@@ -342,11 +342,14 @@ export default function Routines() {
   const [saving, setSaving] = useState(false)
   const sports = ['General','Fútbol','Atletismo','Natación','Baloncesto','Ciclismo','Tenis','Fuerza','Cardio','Gym']
 
-  useEffect(() => { fetchAll() }, [])
+  useEffect(() => { fetchAll() }, [athleteId])
 
   async function fetchAll() {
+    let q = supabase.from('routines').select('*').eq('coach_id', user.id).order('created_at', { ascending: false })
+    if (athleteId) q = q.eq('athlete_id', athleteId)
+    else q = q.is('athlete_id', null)
     const [{ data: r }, { data: e }] = await Promise.all([
-      supabase.from('routines').select('*').eq('coach_id', user.id).order('created_at', { ascending: false }),
+      q,
       supabase.from('exercises').select('id,name,category,is_custom,coach_id').order('name')
     ])
     setRoutines(r || [])
@@ -356,10 +359,12 @@ export default function Routines() {
   async function createRoutine() {
     if (!newForm.name) return
     setSaving(true)
-    const { data } = await supabase.from('routines').insert({
+    const payload = {
       name: newForm.name, sport: newForm.sport,
       coach_id: user.id, exercises_data: JSON.stringify([])
-    }).select().single()
+    }
+    if (athleteId) payload.athlete_id = athleteId
+    const { data } = await supabase.from('routines').insert(payload).select().single()
     setSaving(false)
     setShowNew(false)
     setNewForm({ name: '', sport: 'General' })

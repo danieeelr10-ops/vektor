@@ -93,8 +93,8 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
       supabase.from('sessions').select('*, routines(name,exercises_data)').eq('athlete_id', athlete.id).order('date', { ascending: false }),
       supabase.from('metrics').select('*').eq('user_id', athlete.id).order('date', { ascending: false }),
       supabase.from('rm_records').select('*').eq('user_id', athlete.id).order('date', { ascending: false }),
-      supabase.from('routines').select('id,name').eq('coach_id', user.id).order('name'),
-      supabase.from('routines').select('*').eq('coach_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('routines').select('id,name').eq('coach_id', user.id).eq('athlete_id', athlete.id).order('name'),
+      supabase.from('routines').select('*').eq('coach_id', user.id).eq('athlete_id', athlete.id).order('created_at', { ascending: false }),
       supabase.from('payments').select('*').eq('athlete_id', athlete.id).order('date', { ascending: false }),
       supabase.from('cycles').select('*').eq('athlete_id', athlete.id).order('start_date', { ascending: false }),
       supabase.from('calendar_events').select('*').eq('athlete_id', athlete.id).order('date')
@@ -387,7 +387,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
       </div>
 
       {/* ROUTINES TAB (online only) */}
-      {tab === 'routines' && isOnline && <Routines />}
+      {tab === 'routines' && isOnline && <Routines athleteId={athlete.id} />}
 
       {/* CALENDAR TAB */}
       {tab === 'calendar' && (
