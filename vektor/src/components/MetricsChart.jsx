@@ -4,8 +4,6 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 const COMP_FIELDS = [
   ['weight',       'Peso',              'kg'],
   ['water_l',      'Agua corporal',     'L'],
-  ['protein_kg',   'Proteína',          'kg'],
-  ['bones_kg',     'Minerales',         'kg'],
   ['fat_kg',       'Masa grasa',        'kg'],
   ['lean_mass_kg', 'Masa magra',        'kg'],
   ['fat_free_kg',  'Libre de grasa',    'kg'],

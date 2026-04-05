@@ -290,8 +290,6 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const COMP_FIELDS = [
     ['weight',       'Peso (kg)'],
     ['water_l',      'Agua corporal (L)'],
-    ['protein_kg',   'Proteína (kg)'],
-    ['bones_kg',     'Minerales (kg)'],
     ['fat_kg',       'Masa grasa corporal (kg)'],
     ['lean_mass_kg', 'Masa corporal magra (kg)'],
     ['fat_free_kg',  'Masa libre de grasa (kg)'],
@@ -345,7 +343,12 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     setMSaving(true)
     const payload = { user_id: athlete.id, date: mForm.date, note: mForm.note || null }
     ;[...COMP_FIELDS, ...CIRC_FIELDS].forEach(([k]) => { if (mForm[k] !== '') payload[k] = parseFloat(mForm[k]) })
-    await supabase.from('metrics').insert(payload)
+    const { data: inserted } = await supabase.from('metrics').insert(payload).select('id').single()
+    // Generar análisis IA en background
+    if (inserted?.id) {
+      supabase.functions.invoke('analyze-metrics', { body: { metric_id: inserted.id, user_id: athlete.id } })
+        .then(() => fetchAll())
+    }
     setMSaving(false)
     setShowMetricForm(false)
     setMForm({ date: today, weight: '', water_l: '', protein_kg: '', bones_kg: '', fat_kg: '', lean_mass_kg: '', fat_free_kg: '', muscle_kg: '', imc: '', body_fat: '', arm_r: '', arm_l: '', leg_r: '', leg_l: '', waist: '', note: '' })
@@ -751,16 +754,14 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           )}
           {metrics.map(m => {
             const compRows = [
-              ['Peso',                      m.weight,        'kg'],
-              ['Agua corporal',             m.water_l,       'L'],
-              ['Proteína',                  m.protein_kg,    'kg'],
-              ['Minerales',                 m.bones_kg,      'kg'],
-              ['Masa grasa corporal',       m.fat_kg,        'kg'],
-              ['Masa corporal magra',       m.lean_mass_kg,  'kg'],
-              ['Masa libre de grasa',       m.fat_free_kg,   'kg'],
-              ['MME muscular esquelética',  m.muscle_kg,     'kg'],
-              ['IMC',                       m.imc,           'kg/m²'],
-              ['PGC — % Grasa corporal',    m.body_fat,      '%'],
+              ['Peso',                     m.weight,       'kg'],
+              ['Agua corporal',            m.water_l,      'L'],
+              ['Masa grasa corporal',      m.fat_kg,       'kg'],
+              ['Masa corporal magra',      m.lean_mass_kg, 'kg'],
+              ['Masa libre de grasa',      m.fat_free_kg,  'kg'],
+              ['MME muscular esquelética', m.muscle_kg,    'kg'],
+              ['IMC',                      m.imc,          'kg/m²'],
+              ['PGC — % Grasa corporal',   m.body_fat,     '%'],
             ]
             const circRows = [['Brazo der.',m.arm_r],['Brazo izq.',m.arm_l],['Pierna der.',m.leg_r],['Pierna izq.',m.leg_l],['Cintura',m.waist]]
             return (
@@ -795,6 +796,12 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                   </>
                 )}
                 {m.note && <div style={{ fontSize: '12px', color: '#555', fontStyle: 'italic', marginTop: '10px' }}>"{m.note}"</div>}
+                {m.ai_analysis && (
+                  <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '5px' }}>Análisis IA</div>
+                    <p style={{ fontSize: '12px', color: '#aaa', lineHeight: 1.65, margin: 0 }}>{m.ai_analysis}</p>
+                  </div>
+                )}
               </div>
             )
           })}
