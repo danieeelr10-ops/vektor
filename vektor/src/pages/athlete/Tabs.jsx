@@ -293,7 +293,18 @@ export function Metrics() {
             </div>
           )}
           {metrics.map(m => {
-        const compRows = [['Peso',m.weight,'kg'],['Masa muscular esquelética',m.muscle_kg,'kg'],['% Grasa corporal',m.body_fat,'%'],['Masa grasa',m.fat_kg,'kg'],['Proteína',m.protein_kg,'kg'],['Minerales',m.bones_kg,'kg'],['Agua corporal',m.water_l,'L'],['Masa corporal magra',m.lean_mass_kg,'kg'],['IMC',m.imc,'kg/m²']]
+        const compRows = [
+          ['Peso',                     m.weight,       'kg'],
+          ['Agua corporal',            m.water_l,      'L'],
+          ['Proteína',                 m.protein_kg,   'kg'],
+          ['Minerales',                m.bones_kg,     'kg'],
+          ['Masa grasa corporal',      m.fat_kg,       'kg'],
+          ['Masa corporal magra',      m.lean_mass_kg, 'kg'],
+          ['Masa libre de grasa',      m.fat_free_kg,  'kg'],
+          ['MME muscular esquelética', m.muscle_kg,    'kg'],
+          ['IMC',                      m.imc,          'kg/m²'],
+          ['PGC — % Grasa corporal',   m.body_fat,     '%'],
+        ]
         const circRows = [['Brazo der.',m.arm_r],['Brazo izq.',m.arm_l],['Pierna der.',m.leg_r],['Pierna izq.',m.leg_l],['Cintura',m.waist]]
         return (
           <div className="card" key={m.id} style={{ marginBottom:'10px' }}>
