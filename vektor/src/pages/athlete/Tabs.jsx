@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import MetricsChart from '../../components/MetricsChart'
+import { registerPush, unregisterPush, isPushSupported, isPushSubscribed } from '../../utils/push'
 
 export function Today() {
   const { user } = useAuth()
@@ -517,6 +518,85 @@ export function Progress() {
           </div>
         )}
       </> : <div className="empty">Registra al menos 2 mediciones para ver tus gráficas.</div>}
+    </div>
+  )
+}
+
+export function Notifications() {
+  const { user } = useAuth()
+  const [supported, setSupported] = useState(false)
+  const [subscribed, setSubscribed] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState('')
+
+  useEffect(() => {
+    setSupported(isPushSupported())
+    isPushSubscribed().then(setSubscribed)
+  }, [])
+
+  async function toggle() {
+    setLoading(true)
+    setStatus('')
+    try {
+      if (subscribed) {
+        await unregisterPush(user.id, supabase)
+        setSubscribed(false)
+        setStatus('Notificaciones desactivadas.')
+      } else {
+        const ok = await registerPush(user.id, supabase)
+        if (ok) {
+          setSubscribed(true)
+          setStatus('Notificaciones activadas.')
+        } else {
+          setStatus('No se pudo activar. Verifica los permisos del navegador.')
+        }
+      }
+    } catch (e) {
+      setStatus('Error: ' + e.message)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div className="fade-in">
+      <div className="card">
+        <div className="stitle" style={{ marginBottom: '12px' }}>Notificaciones push</div>
+        {!supported ? (
+          <div className="empty">Tu navegador no soporta notificaciones push.</div>
+        ) : (
+          <>
+            <div style={{ fontSize: '13px', color: 'var(--text2)', marginBottom: '16px', lineHeight: 1.6 }}>
+              Recibe notificaciones cuando tu coach te asigne una sesión u otro evento importante.
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg3)', borderRadius: '10px', padding: '12px 14px' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text1)' }}>
+                  {subscribed ? 'Notificaciones activas' : 'Notificaciones inactivas'}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '2px' }}>
+                  {subscribed ? 'Recibirás alertas de sesiones y mensajes' : 'Actívalas para no perderte nada'}
+                </div>
+              </div>
+              <button
+                onClick={toggle}
+                disabled={loading}
+                style={{
+                  padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: loading ? 'wait' : 'pointer',
+                  fontWeight: 700, fontSize: '12px', fontFamily: 'inherit',
+                  background: subscribed ? 'rgba(248,113,113,0.15)' : 'var(--green)',
+                  color: subscribed ? '#f87171' : '#000',
+                  transition: 'all .15s',
+                }}
+              >
+                {loading ? '...' : subscribed ? 'Desactivar' : 'Activar'}
+              </button>
+            </div>
+            {status && (
+              <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text3)', textAlign: 'center' }}>{status}</div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

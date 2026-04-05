@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { Today, History, Metrics, RMMaximo, Progress } from './Tabs'
+import { Today, History, Metrics, RMMaximo, Progress, Notifications } from './Tabs'
 import Calendar from '../shared/Calendar'
 
 export default function AthleteDashboard() {
@@ -15,6 +15,7 @@ export default function AthleteDashboard() {
     { id: 'metrics', label: 'Métricas' },
     { id: 'rm', label: 'RM' },
     { id: 'progress', label: 'Progreso' },
+    { id: 'notif', label: '🔔' },
   ]
 
   // For presencial: hide Today (no routines) — show calendar, metrics, rm, progress
@@ -53,6 +54,7 @@ export default function AthleteDashboard() {
         {tab === 'metrics' && <Metrics />}
         {tab === 'rm' && <RMMaximo />}
         {tab === 'progress' && <Progress />}
+        {tab === 'notif' && <Notifications />}
       </div>
     </div>
   )

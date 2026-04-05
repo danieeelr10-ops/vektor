@@ -183,17 +183,19 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   }
 
   async function assignSession() {
-    if (!assignForm.routine_id || !selectedDate) return
+    if (!assignForm.routine_id) { alert('Selecciona una rutina'); return }
+    if (!selectedDate) return
     setSaving(true)
     const scheduledTime = (assignForm.start_time && assignForm.end_time) ? `${assignForm.start_time} - ${assignForm.end_time}` : assignForm.start_time || null
     const routine = routines.find(r => r.id === assignForm.routine_id)
-    await supabase.from('sessions').insert({
+    const { error: insertError } = await supabase.from('sessions').insert({
       coach_id: user.id, athlete_id: athlete.id,
       routine_id: assignForm.routine_id, date: selectedDate,
       notes: assignForm.notes, completed: false,
       scheduled_time: scheduledTime
     })
-    // Enviar notificación por email
+    if (insertError) { alert('Error al asignar sesión: ' + insertError.message); setSaving(false); return }
+    // Notificaciones (fire-and-forget)
     if (athleteData.email) {
       supabase.functions.invoke('notify-session', {
         body: {
@@ -206,6 +208,14 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
         }
       })
     }
+    supabase.functions.invoke('notify-push', {
+      body: {
+        user_id: athlete.id,
+        title: 'Nueva sesión asignada',
+        body: `${routine?.name || 'Sesión'} · ${selectedDate}${scheduledTime ? ` · ${scheduledTime}` : ''}`,
+        url: '/',
+      }
+    })
     setSaving(false); setShowAssign(false); fetchAll()
   }
 
@@ -997,6 +1007,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
             <h3>Asignar sesión — {selectedDate}</h3>
             <div className="field"><label>Rutina</label>
               <select value={assignForm.routine_id} onChange={e => setAssignForm({...assignForm, routine_id: e.target.value})}>
+                {routines.length === 0 && <option value="">— Sin rutinas disponibles —</option>}
                 {routines.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             </div>

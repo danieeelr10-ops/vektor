@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { Metrics, RMMaximo } from './Tabs'
+import { Metrics, RMMaximo, Notifications } from './Tabs'
 import AthleteCalendar from './AthleteCalendar'
 import SessionHistory from './SessionHistory'
 import AthleteDashboardView from './AthleteDashboardView'
@@ -16,6 +16,7 @@ export default function AthleteDashboard({ coachAsAthlete = false }) {
     { id: 'metrics', label: 'Métricas' },
     { id: 'rm', label: 'RM' },
     { id: 'progress', label: 'Progreso' },
+    { id: 'notif', label: '🔔' },
   ]
 
   return (
@@ -50,6 +51,7 @@ export default function AthleteDashboard({ coachAsAthlete = false }) {
         {tab === 'metrics' && <Metrics />}
         {tab === 'rm' && <RMMaximo />}
         {tab === 'progress' && <AthleteDashboardView />}
+        {tab === 'notif' && <Notifications />}
       </div>
     </div>
   )
