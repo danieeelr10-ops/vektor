@@ -68,6 +68,8 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [showMetricForm, setShowMetricForm] = useState(false)
   const [mForm, setMForm] = useState({ date: new Date().toISOString().split('T')[0], weight: '', muscle_kg: '', body_fat: '', fat_kg: '', protein_kg: '', bones_kg: '', water_l: '', lean_mass_kg: '', imc: '', arm_r: '', arm_l: '', leg_r: '', leg_l: '', waist: '', note: '' })
   const [mSaving, setMSaving] = useState(false)
+  const [sessionEditor, setSessionEditor] = useState(null) // { session, items, execData }
+  const [sessionEditorSaving, setSessionEditorSaving] = useState(false)
   const today = new Date().toISOString().split('T')[0]
   const year = monthDate.getFullYear()
   const month = monthDate.getMonth()
@@ -301,6 +303,51 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     setMSaving(false)
     setShowMetricForm(false)
     setMForm({ date: today, weight: '', muscle_kg: '', body_fat: '', fat_kg: '', protein_kg: '', bones_kg: '', water_l: '', lean_mass_kg: '', imc: '', arm_r: '', arm_l: '', leg_r: '', leg_l: '', waist: '', note: '' })
+    fetchAll()
+  }
+
+  function openSessionEditor(s) {
+    const exData = (() => { try { const r = s.routines?.exercises_data; return r ? (typeof r === 'string' ? JSON.parse(r) : r) : [] } catch { return [] } })()
+    const execData = (() => { try { return s.execution_data ? JSON.parse(s.execution_data) : {} } catch { return {} } })()
+    // Build items: cada ejercicio con sus series y los valores reales del atleta
+    const items = exData.map((ex, exIdx) => ({
+      ...ex,
+      series: (ex.series || []).map((serie, si) => ({
+        ...serie,
+        realReps:   execData[`${s.id}-${exIdx}-${si}-reps`]   || '',
+        realWeight: execData[`${s.id}-${exIdx}-${si}-weight`] || '',
+      }))
+    }))
+    setSessionEditor({ session: s, items, execData })
+    setShowDayDetail(null)
+  }
+
+  async function saveSessionEditor() {
+    if (!sessionEditor) return
+    setSessionEditorSaving(true)
+    const { session, items } = sessionEditor
+    // Actualizar exercises_data del routine con los nuevos pesos planificados
+    const newExData = items.map(ex => ({
+      name: ex.name,
+      note: ex.note || '',
+      series: ex.series.map(s => ({ reps: s.reps, weight: s.weight }))
+    }))
+    // Actualizar execution_data con los valores reales ingresados
+    const newExecData = {}
+    items.forEach((ex, exIdx) => {
+      ex.series.forEach((s, si) => {
+        if (s.realReps)   newExecData[`${session.id}-${exIdx}-${si}-reps`]   = s.realReps
+        if (s.realWeight) newExecData[`${session.id}-${exIdx}-${si}-weight`] = s.realWeight
+      })
+    })
+    await Promise.all([
+      session.routines?.id
+        ? supabase.from('routines').update({ exercises_data: newExData }).eq('id', session.routines.id)
+        : Promise.resolve(),
+      supabase.from('sessions').update({ execution_data: JSON.stringify(newExecData) }).eq('id', session.id)
+    ])
+    setSessionEditorSaving(false)
+    setSessionEditor(null)
     fetchAll()
   }
 
@@ -913,7 +960,10 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                       ))}
                     </div>
                   )}
-                  <button className="btn danger sm" style={{ marginTop: '8px', fontSize: '10px' }} onClick={async () => { if(!confirm('¿Eliminar esta sesión?')) return; await supabase.from('sessions').delete().eq('id', s.id); setShowDayDetail(null); fetchAll() }}>Eliminar sesión</button>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                    <button className="btn primary sm" style={{ fontSize: '11px', flex: 1 }} onClick={() => openSessionEditor(s)}>✏️ Editar sesión</button>
+                    <button className="btn danger sm" style={{ fontSize: '10px' }} onClick={async () => { if(!confirm('¿Eliminar esta sesión?')) return; await supabase.from('sessions').delete().eq('id', s.id); setShowDayDetail(null); fetchAll() }}>×</button>
+                  </div>
                 </div>
               )
             })}
@@ -1057,6 +1107,67 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button className="btn" onClick={() => setShowEdit(false)}>Cancelar</button>
               <button className="btn primary" onClick={saveEdit} disabled={editSaving}>{editSaving ? 'Guardando...' : 'Guardar cambios'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* SESSION EDITOR MODAL */}
+      {sessionEditor && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setSessionEditor(null)}>
+          <div className="modal" style={{ maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <h3 style={{ margin: 0 }}>{sessionEditor.session.routines?.name || 'Sesión'}</h3>
+              <button className="btn sm" onClick={() => setSessionEditor(null)}>✕</button>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text2)', marginBottom: '16px' }}>{sessionEditor.session.date}</div>
+
+            {sessionEditor.items.map((ex, exIdx) => (
+              <div key={exIdx} style={{ marginBottom: '16px', background: 'var(--bg3)', borderRadius: '10px', padding: '12px 14px' }}>
+                {/* Nombre del ejercicio */}
+                <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text1)', marginBottom: '4px' }}>{ex.name}</div>
+                {ex.note && <div style={{ fontSize: '11px', color: 'var(--text3)', marginBottom: '8px' }}>{ex.note}</div>}
+
+                {/* Tabla de series */}
+                <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 1fr 1fr', gap: '4px', alignItems: 'center' }}>
+                  {/* Headers */}
+                  <div />
+                  {['Reps plan','Kg plan','Reps real','Kg real'].map(h => (
+                    <div key={h} style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', textAlign: 'center', paddingBottom: '4px' }}>{h}</div>
+                  ))}
+                  {ex.series.map((serie, si) => (
+                    <>
+                      <div key={`lbl-${si}`} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--green)', textAlign: 'center' }}>S{si+1}</div>
+                      {/* Reps plan */}
+                      <input key={`rp-${si}`} type="text" value={serie.reps} onChange={e => {
+                        const items = sessionEditor.items.map((ex2, i2) => i2 !== exIdx ? ex2 : { ...ex2, series: ex2.series.map((s2, j) => j !== si ? s2 : { ...s2, reps: e.target.value }) })
+                        setSessionEditor(se => ({ ...se, items }))
+                      }} style={{ padding: '5px 6px', fontSize: '12px', textAlign: 'center', background: 'var(--bg2)', border: '1px solid var(--border)' }} />
+                      {/* Kg plan */}
+                      <input key={`wp-${si}`} type="text" value={serie.weight} onChange={e => {
+                        const items = sessionEditor.items.map((ex2, i2) => i2 !== exIdx ? ex2 : { ...ex2, series: ex2.series.map((s2, j) => j !== si ? s2 : { ...s2, weight: e.target.value }) })
+                        setSessionEditor(se => ({ ...se, items }))
+                      }} style={{ padding: '5px 6px', fontSize: '12px', textAlign: 'center', background: 'var(--bg2)', border: '1px solid var(--border)' }} placeholder="—" />
+                      {/* Reps real */}
+                      <input key={`rr-${si}`} type="text" value={serie.realReps} onChange={e => {
+                        const items = sessionEditor.items.map((ex2, i2) => i2 !== exIdx ? ex2 : { ...ex2, series: ex2.series.map((s2, j) => j !== si ? s2 : { ...s2, realReps: e.target.value }) })
+                        setSessionEditor(se => ({ ...se, items }))
+                      }} style={{ padding: '5px 6px', fontSize: '12px', textAlign: 'center', background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.2)', color: '#60a5fa' }} placeholder="—" />
+                      {/* Kg real */}
+                      <input key={`wr-${si}`} type="text" value={serie.realWeight} onChange={e => {
+                        const items = sessionEditor.items.map((ex2, i2) => i2 !== exIdx ? ex2 : { ...ex2, series: ex2.series.map((s2, j) => j !== si ? s2 : { ...s2, realWeight: e.target.value }) })
+                        setSessionEditor(se => ({ ...se, items }))
+                      }} style={{ padding: '5px 6px', fontSize: '12px', textAlign: 'center', background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.2)', color: '#60a5fa' }} placeholder="—" />
+                    </>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
+              <button className="btn" onClick={() => setSessionEditor(null)}>Cancelar</button>
+              <button className="btn primary" onClick={saveSessionEditor} disabled={sessionEditorSaving}>
+                {sessionEditorSaving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
             </div>
           </div>
         </div>
