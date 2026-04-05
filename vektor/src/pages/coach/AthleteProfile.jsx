@@ -68,6 +68,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [showMetricForm, setShowMetricForm] = useState(false)
   const [mForm, setMForm] = useState({ date: new Date().toISOString().split('T')[0], weight: '', muscle_kg: '', body_fat: '', fat_kg: '', protein_kg: '', bones_kg: '', water_l: '', lean_mass_kg: '', imc: '', arm_r: '', arm_l: '', leg_r: '', leg_l: '', waist: '', note: '' })
   const [mSaving, setMSaving] = useState(false)
+  const [mScanning, setMScanning] = useState(false)
   const [sessionEditor, setSessionEditor] = useState(null) // { session, items, execData }
   const [sessionEditorSaving, setSessionEditorSaving] = useState(false)
   const today = new Date().toISOString().split('T')[0]
@@ -304,6 +305,39 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     ['leg_l','Pierna izq. (cm)'],
     ['waist','Cintura (cm)'],
   ]
+
+  async function scanMetrics(file) {
+    setMScanning(true)
+    try {
+      const reader = new FileReader()
+      const base64 = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      const { data, error } = await supabase.functions.invoke('scan-metrics', {
+        body: { image_base64: base64, mime_type: file.type || 'image/jpeg' }
+      })
+      if (error) throw new Error(error.message)
+      if (!data.ok) throw new Error(data.error)
+      const m = data.metrics
+      setMForm(f => ({
+        ...f,
+        ...(m.weight     != null ? { weight:      String(m.weight)     } : {}),
+        ...(m.imc        != null ? { imc:         String(m.imc)        } : {}),
+        ...(m.body_fat   != null ? { body_fat:    String(m.body_fat)   } : {}),
+        ...(m.fat_kg     != null ? { fat_kg:      String(m.fat_kg)     } : {}),
+        ...(m.muscle_kg  != null ? { muscle_kg:   String(m.muscle_kg)  } : {}),
+        ...(m.protein_kg != null ? { protein_kg:  String(m.protein_kg) } : {}),
+        ...(m.bones_kg   != null ? { bones_kg:    String(m.bones_kg)   } : {}),
+        ...(m.water_l    != null ? { water_l:     String(m.water_l)    } : {}),
+        ...(m.lean_mass_kg != null ? { lean_mass_kg: String(m.lean_mass_kg) } : {}),
+      }))
+    } catch (e) {
+      alert('Error al escanear: ' + e.message)
+    }
+    setMScanning(false)
+  }
 
   async function saveMetric() {
     setMSaving(true)
@@ -669,6 +703,21 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           </div>
           {showMetricForm && (
             <div style={{ background: '#111', border: '1px solid rgba(74,222,128,0.2)', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
+
+              {/* Escanear báscula */}
+              <label style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                width: '100%', padding: '10px', marginBottom: '14px', borderRadius: '10px',
+                border: '1px dashed rgba(74,222,128,0.4)', cursor: mScanning ? 'wait' : 'pointer',
+                background: 'rgba(74,222,128,0.05)', color: mScanning ? '#555' : '#4ade80',
+                fontSize: '12px', fontWeight: 700, fontFamily: 'inherit', transition: 'all .15s'
+              }}>
+                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+                  onChange={e => { if (e.target.files?.[0]) scanMetrics(e.target.files[0]); e.target.value = '' }}
+                  disabled={mScanning} />
+                {mScanning ? '⏳ Analizando imagen...' : '📷 Escanear báscula'}
+              </label>
+
               <div className="field"><label>Fecha</label><input type="date" value={mForm.date} onChange={e => setMForm({...mForm, date: e.target.value})} /></div>
               <div style={{ fontSize: '10px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '8px' }}>Composición corporal</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
