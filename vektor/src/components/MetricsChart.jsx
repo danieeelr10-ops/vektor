@@ -2,15 +2,16 @@ import { useState } from 'react'
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
 
 const COMP_FIELDS = [
-  ['weight',      'Peso',              'kg'],
-  ['muscle_kg',   'Masa muscular',     'kg'],
-  ['body_fat',    '% Grasa',           '%'],
-  ['fat_kg',      'Masa grasa',        'kg'],
-  ['protein_kg',  'Proteína',          'kg'],
-  ['bones_kg',    'Minerales',         'kg'],
-  ['water_l',     'Agua',              'L'],
-  ['lean_mass_kg','Masa magra',        'kg'],
-  ['imc',         'IMC',               'kg/m²'],
+  ['weight',       'Peso',              'kg'],
+  ['water_l',      'Agua corporal',     'L'],
+  ['protein_kg',   'Proteína',          'kg'],
+  ['bones_kg',     'Minerales',         'kg'],
+  ['fat_kg',       'Masa grasa',        'kg'],
+  ['lean_mass_kg', 'Masa magra',        'kg'],
+  ['fat_free_kg',  'Libre de grasa',    'kg'],
+  ['muscle_kg',    'MME muscular',      'kg'],
+  ['imc',          'IMC',               'kg/m²'],
+  ['body_fat',     '% Grasa (PGC)',     '%'],
 ]
 
 const CIRC_FIELDS = [

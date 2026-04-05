@@ -22,32 +22,34 @@ Deno.serve(async (req) => {
           },
           {
             type: 'text',
-            text: `Analiza esta imagen de una báscula de composición corporal e identifica los valores numéricos mostrados en pantalla.
-
-Devuelve ÚNICAMENTE un objeto JSON con los campos que puedas identificar (omite los que no aparezcan en la imagen):
+            text: `Eres un extractor de datos de básculas de composición corporal (InBody o similar).
+Analiza esta imagen y extrae los valores numéricos. Devuelve ÚNICAMENTE un JSON con estos campos exactos (omite los que no puedas leer con certeza):
 
 {
-  "weight": <peso en kg como número>,
-  "imc": <IMC/BMI como número>,
-  "body_fat": <% grasa corporal como número>,
-  "fat_kg": <masa grasa en kg como número>,
-  "muscle_kg": <masa muscular esquelética en kg como número>,
-  "protein_kg": <proteína en kg como número>,
-  "bones_kg": <masa ósea o minerales en kg como número>,
-  "water_l": <agua corporal en litros como número>,
-  "lean_mass_kg": <masa magra en kg como número>
+  "weight": <Peso en Kg>,
+  "water_l": <Total de agua corporal en L>,
+  "protein_kg": <Proteína en Kg>,
+  "bones_kg": <Minerales en Kg>,
+  "fat_kg": <Masa de grasa corporal en Kg>,
+  "lean_mass_kg": <Masa corporal magra en Kg>,
+  "fat_free_kg": <Masa libre de grasa en Kg>,
+  "muscle_kg": <MME / Masa muscular esquelética en Kg>,
+  "imc": <IMC / Índice de masa corporal en Kg/m²>,
+  "body_fat": <PGC / Porcentaje de grasa corporal en %>
 }
 
-Si un valor está en libras (lbs), conviértelo a kg. Devuelve SOLO el JSON válido, sin texto adicional ni markdown.`
+Reglas:
+- Usa solo los valores principales (no los rangos de referencia entre paréntesis)
+- Si un valor está en libras conviértelo a kg
+- Devuelve SOLO el JSON válido, sin texto ni markdown`
           }
         ]
       }]
     })
 
     const raw = (response.content[0] as { type: string; text: string }).text.trim()
-    // Extraer JSON aunque venga envuelto en ```
     const jsonMatch = raw.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('No JSON found in response')
+    if (!jsonMatch) throw new Error('No JSON in response')
 
     const metrics = JSON.parse(jsonMatch[0])
 

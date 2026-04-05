@@ -288,15 +288,16 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   }
 
   const COMP_FIELDS = [
-    ['weight','Peso (kg)'],
-    ['muscle_kg','Masa muscular esquelética (kg)'],
-    ['body_fat','% Grasa corporal'],
-    ['fat_kg','Masa grasa (kg)'],
-    ['protein_kg','Proteína (kg)'],
-    ['bones_kg','Minerales (kg)'],
-    ['water_l','Agua corporal (L)'],
-    ['lean_mass_kg','Masa corporal magra (kg)'],
-    ['imc','IMC (kg/m²)'],
+    ['weight',       'Peso (kg)'],
+    ['water_l',      'Agua corporal (L)'],
+    ['protein_kg',   'Proteína (kg)'],
+    ['bones_kg',     'Minerales (kg)'],
+    ['fat_kg',       'Masa grasa corporal (kg)'],
+    ['lean_mass_kg', 'Masa corporal magra (kg)'],
+    ['fat_free_kg',  'Masa libre de grasa (kg)'],
+    ['muscle_kg',    'MME — Masa muscular esquelética (kg)'],
+    ['imc',          'IMC (kg/m²)'],
+    ['body_fat',     'PGC — % Grasa corporal'],
   ]
   const CIRC_FIELDS = [
     ['arm_r','Brazo der. (cm)'],
@@ -331,7 +332,8 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
         ...(m.protein_kg != null ? { protein_kg:  String(m.protein_kg) } : {}),
         ...(m.bones_kg   != null ? { bones_kg:    String(m.bones_kg)   } : {}),
         ...(m.water_l    != null ? { water_l:     String(m.water_l)    } : {}),
-        ...(m.lean_mass_kg != null ? { lean_mass_kg: String(m.lean_mass_kg) } : {}),
+        ...(m.lean_mass_kg  != null ? { lean_mass_kg:  String(m.lean_mass_kg)  } : {}),
+        ...(m.fat_free_kg  != null ? { fat_free_kg:   String(m.fat_free_kg)   } : {}),
       }))
     } catch (e) {
       alert('Error al escanear: ' + e.message)
@@ -346,7 +348,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     await supabase.from('metrics').insert(payload)
     setMSaving(false)
     setShowMetricForm(false)
-    setMForm({ date: today, weight: '', muscle_kg: '', body_fat: '', fat_kg: '', protein_kg: '', bones_kg: '', water_l: '', lean_mass_kg: '', imc: '', arm_r: '', arm_l: '', leg_r: '', leg_l: '', waist: '', note: '' })
+    setMForm({ date: today, weight: '', water_l: '', protein_kg: '', bones_kg: '', fat_kg: '', lean_mass_kg: '', fat_free_kg: '', muscle_kg: '', imc: '', body_fat: '', arm_r: '', arm_l: '', leg_r: '', leg_l: '', waist: '', note: '' })
     fetchAll()
   }
 
