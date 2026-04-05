@@ -269,12 +269,27 @@ export function History() {
 export function Metrics() {
   const { user } = useAuth()
   const [metrics, setMetrics] = useState([])
+  const [analysisOpen, setAnalysisOpen] = useState(false)
+  const [analysisText, setAnalysisText] = useState('')
+  const [analysisLoading, setAnalysisLoading] = useState(false)
 
   useEffect(() => { fetchMetrics() }, [])
 
   async function fetchMetrics() {
     const { data } = await supabase.from('metrics').select('*').eq('user_id', user.id).order('date', { ascending: false })
     setMetrics(data || [])
+  }
+
+  async function toggleAnalysis() {
+    if (analysisOpen) { setAnalysisOpen(false); return }
+    setAnalysisOpen(true)
+    if (analysisText) return
+    setAnalysisLoading(true)
+    const { data } = await supabase.functions.invoke('analyze-metrics-general', {
+      body: { user_id: user.id }
+    })
+    setAnalysisText(data?.analysis || 'No se pudo generar el análisis.')
+    setAnalysisLoading(false)
   }
 
   return (
@@ -290,6 +305,27 @@ export function Metrics() {
           {metrics.length >= 2 && (
             <div className="card" style={{ marginBottom:'14px' }}>
               <MetricsChart metrics={metrics} />
+            </div>
+          )}
+          {metrics.length >= 2 && (
+            <div style={{ marginBottom:'14px' }}>
+              <button onClick={toggleAnalysis} style={{
+                width:'100%', padding:'10px', borderRadius:'10px',
+                border:'1px solid var(--border2)',
+                background: analysisOpen ? 'var(--green-dim)' : 'transparent',
+                color:'var(--green)', fontSize:'12px', fontWeight:700, cursor:'pointer',
+                fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px'
+              }}>
+                {analysisLoading ? '⏳ Generando análisis...' : `${analysisOpen ? '▲' : '▼'} Análisis del proceso`}
+              </button>
+              {analysisOpen && (
+                <div style={{ marginTop:'8px', padding:'14px', background:'var(--green-dim)', border:'1px solid var(--border2)', borderRadius:'10px' }}>
+                  {analysisLoading
+                    ? <div style={{ color:'var(--text3)', fontSize:'12px', textAlign:'center' }}>Generando...</div>
+                    : <p style={{ fontSize:'13px', color:'var(--text)', lineHeight:1.7, margin:0 }}>{analysisText}</p>
+                  }
+                </div>
+              )}
             </div>
           )}
           {metrics.map((m, mIdx) => {
@@ -341,12 +377,6 @@ export function Metrics() {
               </>
             )}
             {m.note && <div style={{ fontSize:'12px', color:'var(--text2)', fontStyle:'italic', marginTop:'10px' }}>"{m.note}"</div>}
-            {mIdx === 0 && m.ai_analysis && (
-              <div style={{ marginTop:'12px', padding:'10px 12px', background:'var(--green-dim)', border:'1px solid var(--border2)', borderRadius:'8px' }}>
-                <div style={{ fontSize:'9px', fontWeight:700, color:'var(--green)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'5px' }}>Análisis</div>
-                <p style={{ fontSize:'12px', color:'var(--text2)', lineHeight:1.65, margin:0 }}>{m.ai_analysis}</p>
-              </div>
-            )}
           </div>
         )
       })}

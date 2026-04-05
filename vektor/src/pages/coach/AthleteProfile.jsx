@@ -69,6 +69,9 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
   const [mForm, setMForm] = useState({ date: new Date().toISOString().split('T')[0], weight: '', muscle_kg: '', body_fat: '', fat_kg: '', protein_kg: '', bones_kg: '', water_l: '', lean_mass_kg: '', imc: '', arm_r: '', arm_l: '', leg_r: '', leg_l: '', waist: '', note: '' })
   const [mSaving, setMSaving] = useState(false)
   const [mScanning, setMScanning] = useState(false)
+  const [analysisOpen, setAnalysisOpen] = useState(false)
+  const [analysisText, setAnalysisText] = useState('')
+  const [analysisLoading, setAnalysisLoading] = useState(false)
   const [sessionEditor, setSessionEditor] = useState(null) // { session, items, execData }
   const [sessionEditorSaving, setSessionEditorSaving] = useState(false)
   const today = new Date().toISOString().split('T')[0]
@@ -304,6 +307,18 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
     ['leg_l','Pierna izq. (cm)'],
     ['waist','Cintura (cm)'],
   ]
+
+  async function toggleAnalysis() {
+    if (analysisOpen) { setAnalysisOpen(false); return }
+    setAnalysisOpen(true)
+    if (analysisText) return
+    setAnalysisLoading(true)
+    const { data } = await supabase.functions.invoke('analyze-metrics-general', {
+      body: { user_id: athlete.id, athlete_name: athleteData?.name || athlete.name }
+    })
+    setAnalysisText(data?.analysis || 'No se pudo generar el análisis.')
+    setAnalysisLoading(false)
+  }
 
   async function scanMetrics(file) {
     setMScanning(true)
@@ -748,6 +763,27 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           )}
           {metrics.length === 0 && !showMetricForm && <div className="empty">Sin medidas registradas.</div>}
           {metrics.length >= 2 && (
+            <div style={{ marginBottom: '14px' }}>
+              <button onClick={toggleAnalysis} style={{
+                width: '100%', padding: '10px', borderRadius: '10px',
+                border: '1px solid rgba(74,222,128,0.3)',
+                background: analysisOpen ? 'rgba(74,222,128,0.08)' : 'transparent',
+                color: '#4ade80', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+              }}>
+                {analysisLoading ? '⏳ Generando análisis...' : `${analysisOpen ? '▲' : '▼'} Análisis del proceso`}
+              </button>
+              {analysisOpen && (
+                <div style={{ marginTop: '8px', padding: '14px', background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '10px' }}>
+                  {analysisLoading
+                    ? <div style={{ color: '#555', fontSize: '12px', textAlign: 'center' }}>Generando...</div>
+                    : <p style={{ fontSize: '13px', color: '#ccc', lineHeight: 1.7, margin: 0 }}>{analysisText}</p>
+                  }
+                </div>
+              )}
+            </div>
+          )}
+          {metrics.length >= 2 && (
             <div style={{ background:'#111', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'12px', padding:'16px', marginBottom:'14px' }}>
               <MetricsChart metrics={metrics} />
             </div>
@@ -796,12 +832,6 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                   </>
                 )}
                 {m.note && <div style={{ fontSize: '12px', color: '#555', fontStyle: 'italic', marginTop: '10px' }}>"{m.note}"</div>}
-                {mIdx === 0 && m.ai_analysis && (
-                  <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '5px' }}>Análisis</div>
-                    <p style={{ fontSize: '12px', color: '#aaa', lineHeight: 1.65, margin: 0 }}>{m.ai_analysis}</p>
-                  </div>
-                )}
               </div>
             )
           })}
