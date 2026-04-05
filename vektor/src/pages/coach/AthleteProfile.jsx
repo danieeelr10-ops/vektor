@@ -497,7 +497,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
           {sessions.filter(s => s.completed).length === 0 && <div className="empty">Sin sesiones completadas aún.</div>}
           {sessions.filter(s => s.completed).map(s => {
             const isExpanded = expandedSessions.has(s.id)
-            const exData = (() => { try { return s.routines?.exercises_data ? JSON.parse(s.routines.exercises_data) : null } catch { return null } })()
+            const exData = (() => { try { const r = s.routines?.exercises_data; return r ? (typeof r === 'string' ? JSON.parse(r) : r) : null } catch { return null } })()
             const execData = (() => { try { return s.execution_data ? JSON.parse(s.execution_data) : null } catch { return null } })()
             return (
               <div key={s.id} style={{ background: '#111', border: `1px solid ${isExpanded ? 'rgba(74,222,128,0.3)' : 'rgba(74,222,128,0.1)'}`, borderRadius: '12px', marginBottom: '8px', overflow: 'hidden', transition: 'border-color .15s' }}>
@@ -848,7 +848,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
               </div>
             )}
             {showDayDetail.sessions.map(s => {
-              const exData = (() => { try { return s.routines?.exercises_data ? JSON.parse(s.routines.exercises_data) : null } catch { return null } })()
+              const exData = (() => { try { const r = s.routines?.exercises_data; return r ? (typeof r === 'string' ? JSON.parse(r) : r) : null } catch { return null } })()
               const execData = (() => { try { return s.execution_data ? JSON.parse(s.execution_data) : null } catch { return null } })()
               return (
                 <div key={s.id} style={{ background: s.completed ? 'rgba(74,222,128,0.06)' : '#1a1a1a', border: `1px solid ${s.completed ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.07)'}`, borderRadius: '10px', padding: '12px 14px', marginBottom: '10px' }}>

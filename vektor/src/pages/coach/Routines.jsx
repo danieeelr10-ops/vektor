@@ -106,7 +106,8 @@ function RoutineDetail({ routine, onBack, onSaved, exercises, setExercises, coac
 
   useEffect(() => {
     try {
-      const data = routine.exercises_data ? JSON.parse(routine.exercises_data) : []
+      const raw = routine.exercises_data
+      const data = !raw ? [] : typeof raw === 'string' ? JSON.parse(raw) : raw
       setItems(data.length ? data.map(d => ({ ...d, expanded: false })) : [newExItem()])
     } catch { setItems([newExItem()]) }
   }, [routine.id])
@@ -378,7 +379,10 @@ export default function Routines({ athleteId }) {
   }
 
   function parseExData(r) {
-    try { return r.exercises_data ? JSON.parse(r.exercises_data) : [] } catch { return [] }
+    try {
+      const raw = r.exercises_data
+      return !raw ? [] : typeof raw === 'string' ? JSON.parse(raw) : raw
+    } catch { return [] }
   }
 
   if (selected) {

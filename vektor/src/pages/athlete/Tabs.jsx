@@ -29,7 +29,7 @@ export function Today() {
   }
 
   function getExData(s) {
-    try { return s.routines?.exercises_data ? JSON.parse(s.routines.exercises_data) : null } catch { return null }
+    try { const r = s.routines?.exercises_data; return r ? (typeof r === 'string' ? JSON.parse(r) : r) : null } catch { return null }
   }
 
   function updateExecution(sessionId, exIdx, serieIdx, field, val) {

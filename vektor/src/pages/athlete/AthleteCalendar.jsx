@@ -74,7 +74,7 @@ export default function AthleteCalendar() {
   }
 
   function getExData(session) {
-    try { return session.routines?.exercises_data ? JSON.parse(session.routines.exercises_data) : null } catch { return null }
+    try { const r = session.routines?.exercises_data; return r ? (typeof r === 'string' ? JSON.parse(r) : r) : null } catch { return null }
   }
 
   function updateExecution(exIdx, serieIdx, field, val) {
@@ -260,7 +260,7 @@ export default function AthleteCalendar() {
 
   // SESSION SUMMARY MODAL
   if (showSummary) {
-    const exData = (() => { try { return showSummary.session.routines?.exercises_data ? JSON.parse(showSummary.session.routines.exercises_data) : null } catch { return null } })()
+    const exData = (() => { try { const r = showSummary.session.routines?.exercises_data; return r ? (typeof r === 'string' ? JSON.parse(r) : r) : null } catch { return null } })()
     const sid = showSummary.session.id
     return (
       <div className="fade-in">
