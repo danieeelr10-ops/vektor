@@ -292,7 +292,7 @@ export function Metrics() {
               <MetricsChart metrics={metrics} />
             </div>
           )}
-          {metrics.map(m => {
+          {metrics.map((m, mIdx) => {
         const compRows = [
           ['Peso',                     m.weight,       'kg'],
           ['Agua corporal',            m.water_l,      'L'],
@@ -341,7 +341,7 @@ export function Metrics() {
               </>
             )}
             {m.note && <div style={{ fontSize:'12px', color:'var(--text2)', fontStyle:'italic', marginTop:'10px' }}>"{m.note}"</div>}
-            {m.ai_analysis && (
+            {mIdx === 0 && m.ai_analysis && (
               <div style={{ marginTop:'12px', padding:'10px 12px', background:'var(--green-dim)', border:'1px solid var(--border2)', borderRadius:'8px' }}>
                 <div style={{ fontSize:'9px', fontWeight:700, color:'var(--green)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'5px' }}>Análisis</div>
                 <p style={{ fontSize:'12px', color:'var(--text2)', lineHeight:1.65, margin:0 }}>{m.ai_analysis}</p>

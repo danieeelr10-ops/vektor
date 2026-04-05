@@ -752,7 +752,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
               <MetricsChart metrics={metrics} />
             </div>
           )}
-          {metrics.map(m => {
+          {metrics.map((m, mIdx) => {
             const compRows = [
               ['Peso',                     m.weight,       'kg'],
               ['Agua corporal',            m.water_l,      'L'],
@@ -796,9 +796,9 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
                   </>
                 )}
                 {m.note && <div style={{ fontSize: '12px', color: '#555', fontStyle: 'italic', marginTop: '10px' }}>"{m.note}"</div>}
-                {m.ai_analysis && (
+                {mIdx === 0 && m.ai_analysis && (
                   <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.15)', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '5px' }}>Análisis IA</div>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '5px' }}>Análisis</div>
                     <p style={{ fontSize: '12px', color: '#aaa', lineHeight: 1.65, margin: 0 }}>{m.ai_analysis}</p>
                   </div>
                 )}
