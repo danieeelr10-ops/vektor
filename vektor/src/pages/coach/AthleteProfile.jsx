@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import AthleteDashboard from './AthleteDashboard'
 import Routines from './Routines'
 import MetricsChart from '../../components/MetricsChart'
+import ProgressShareCard from '../../components/ProgressShareCard'
 
 const TIME_OPTIONS = ['', ...Array.from({length: 34}, (_, i) => {
   const totalMins = 5 * 60 + i * 30
@@ -758,6 +759,7 @@ export default function AthleteProfile({ athlete, onBack, onUpdate }) {
               <MetricsChart metrics={metrics} />
             </div>
           )}
+          <ProgressShareCard metrics={metrics} athleteName={athleteData?.name || athlete?.name} />
           {metrics.map((m, mIdx) => {
             const compRows = [
               ['Peso',                     m.weight,       'kg'],
