@@ -25,7 +25,7 @@ export default function AthleteDashboard() {
     <div>
       <div className="topbar">
         <div className="logo">
-          <img src="/logo-vektor.png" alt="Vektor Training" style={{ height:'32px', width:'auto' }} />
+          <img src="/logo-vektor.png" alt="Vektor Training" style={{ height:'48px', width:'auto' }} />
           <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px', background: isOnline ? 'rgba(96,165,250,0.15)' : 'rgba(167,139,250,0.15)', color: isOnline ? '#60a5fa' : '#a78bfa' }}>
             {isOnline ? 'Online' : 'Presencial'}
           </span>

@@ -69,7 +69,7 @@ export default function Login() {
 
   const Logo = () => (
     <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-      <img src="/logo-vektor.png" alt="Vektor Training" style={{ height: '64px', width: 'auto', margin: '0 auto 12px', display: 'block' }} />
+      <img src="/logo-vektor.png" alt="Vektor Training" style={{ height: '90px', width: 'auto', margin: '0 auto 12px', display: 'block' }} />
       <p style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '.08em', fontWeight: 600 }}>Plataforma de entrenamiento deportivo</p>
     </div>
   )
