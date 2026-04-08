@@ -65,17 +65,13 @@ function WelcomeBanner({ profile, onGoToCalendar }) {
         }}>Ver calendario</button>
       </div>
 
-      {/* Right stats card */}
+      {/* Right logo card */}
       <div style={{
-        borderRadius: '16px', padding: '20px 22px',
+        borderRadius: '16px', padding: '20px',
         background: '#111', border: '1px solid rgba(255,255,255,0.07)',
-        minWidth: '130px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+        minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}>
-        <div style={{ fontSize: '9px', fontWeight: 800, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: '10px' }}>Racha</div>
-        <div style={{ fontSize: '40px', fontWeight: 900, color: '#fff', lineHeight: 1, fontFamily: 'var(--mono)' }}>
-          {streak}<span style={{ fontSize: '14px', color: 'var(--text3)', marginLeft: '3px' }}>días</span>
-        </div>
-        <div style={{ fontSize: '11px', color: 'var(--text3)', marginTop: '8px' }}>sesiones completadas consecutivas</div>
+        <img src="/logo-vektor.png" alt="Vektor Training" style={{ width: '100%', maxWidth: '110px', height: 'auto', display: 'block' }} />
       </div>
     </div>
   )
