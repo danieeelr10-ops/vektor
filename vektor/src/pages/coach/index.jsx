@@ -24,8 +24,7 @@ export default function CoachDashboard() {
     <div>
       <div className="topbar">
         <div className="logo">
-          <div className="logo-mark">V</div>
-          Vektor <span>Training</span>
+          <img src="/logo-vektor.png" alt="Vektor Training" style={{ height:'32px', width:'auto' }} />
           <span style={{ fontSize:'9px', fontWeight:700, textTransform:'uppercase', padding:'2px 6px', borderRadius:'4px', marginLeft:'6px', background:'rgba(74,222,128,0.15)', color:'#4ade80' }}>Mi entreno</span>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
@@ -43,8 +42,7 @@ export default function CoachDashboard() {
     <div>
       <div className="topbar">
         <div className="logo">
-          <div className="logo-mark">V</div>
-          Vektor <span>Training</span>
+          <img src="/logo-vektor.png" alt="Vektor Training" style={{ height:'32px', width:'auto' }} />
           <span style={{ fontSize:'10px', color:'var(--text3)', fontWeight:400 }}>Coach</span>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
